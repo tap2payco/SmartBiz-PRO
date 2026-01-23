@@ -1,0 +1,141 @@
+import { pgTable, uuid, varchar, text, decimal, integer, boolean, timestamp, pgEnum } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
+import { organizations } from './auth'
+
+// Enums
+export const stockMovementTypeEnum = pgEnum('stock_movement_type', [
+    'GRN',           // Goods Received Note (stock in from supplier)
+    'SALE',          // Stock out from sale
+    'ADJUSTMENT',    // Manual adjustment (+ or -)
+    'TRANSFER_IN',   // Transfer from another location
+    'TRANSFER_OUT',  // Transfer to another location
+    'RETURN',        // Customer return (stock in)
+    'DAMAGE',        // Damaged goods (stock out)
+    'THEFT'          // Theft/loss (stock out)
+])
+
+export const locationTypeEnum = pgEnum('location_type', [
+    'WAREHOUSE',
+    'STORE',
+    'OTHER'
+])
+
+// Item Categories Table
+export const itemCategories = pgTable('item_categories', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    parentId: uuid('parent_id'), // For subcategories
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow()
+})
+
+// Items (Products) Table
+export const items = pgTable('items', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    sku: varchar('sku', { length: 100 }).notNull(),
+    barcode: varchar('barcode', { length: 100 }),
+    description: text('description'),
+    categoryId: uuid('category_id').references(() => itemCategories.id),
+    unit: varchar('unit', { length: 50 }).notNull().default('pcs'), // pcs, kg, liter, etc.
+    type: varchar('type', { length: 20 }).notNull().default('good'), // 'good' | 'service'
+    costPrice: decimal('cost_price', { precision: 10, scale: 2 }).notNull().default('0'),
+    sellingPrice: decimal('selling_price', { precision: 10, scale: 2 }).notNull().default('0'),
+    reorderPoint: integer('reorder_point').default(0),
+    reorderQuantity: integer('reorder_quantity').default(0),
+    imageUrl: text('image_url'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow()
+})
+
+// Locations Table
+export const locations = pgTable('locations', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    type: locationTypeEnum('type').notNull().default('STORE'),
+    address: text('address'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at').notNull().defaultNow()
+})
+
+// Stock Movements Table (Event-Sourced)
+export const stockMovements = pgTable('stock_movements', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    locationId: uuid('location_id').references(() => locations.id),
+    type: stockMovementTypeEnum('type').notNull(),
+    quantity: integer('quantity').notNull(), // Positive for in, negative for out
+    referenceType: varchar('reference_type', { length: 50 }), // 'sale', 'purchase', 'adjustment'
+    referenceId: uuid('reference_id'), // ID of the related document
+    notes: text('notes'),
+    createdBy: uuid('created_by'), // User who created the movement
+    createdAt: timestamp('created_at').notNull().defaultNow()
+})
+
+// Relations
+export const itemCategoriesRelations = relations(itemCategories, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [itemCategories.organizationId],
+        references: [organizations.id]
+    }),
+    parent: one(itemCategories, {
+        fields: [itemCategories.parentId],
+        references: [itemCategories.id]
+    }),
+    items: many(items)
+}))
+
+export const itemsRelations = relations(items, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [items.organizationId],
+        references: [organizations.id]
+    }),
+    category: one(itemCategories, {
+        fields: [items.categoryId],
+        references: [itemCategories.id]
+    }),
+    stockMovements: many(stockMovements)
+}))
+
+export const locationsRelations = relations(locations, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [locations.organizationId],
+        references: [organizations.id]
+    }),
+    stockMovements: many(stockMovements)
+}))
+
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+    organization: one(organizations, {
+        fields: [stockMovements.organizationId],
+        references: [organizations.id]
+    }),
+    item: one(items, {
+        fields: [stockMovements.itemId],
+        references: [items.id]
+    }),
+    location: one(locations, {
+        fields: [stockMovements.locationId],
+        references: [locations.id]
+    })
+}))
+
+// TypeScript Types
+export type ItemCategory = typeof itemCategories.$inferSelect
+export type NewItemCategory = typeof itemCategories.$inferInsert
+
+export type Item = typeof items.$inferSelect
+export type NewItem = typeof items.$inferInsert
+
+export type Location = typeof locations.$inferSelect
+export type NewLocation = typeof locations.$inferInsert
+
+export type StockMovement = typeof stockMovements.$inferSelect
+export type NewStockMovement = typeof stockMovements.$inferInsert
