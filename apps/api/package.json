@@ -5,7 +5,8 @@
     "scripts": {
         "dev": "bun run --watch src/index.ts",
         "start": "bun run src/index.ts",
-        "test": "bun test"
+        "test": "bun test",
+        "build": "node -e \"const fs = require('fs'); if (!fs.existsSync('public')) fs.mkdirSync('public');\""
     },
     "dependencies": {
         "@hono/node-server": "^1.19.9",
