@@ -33,7 +33,7 @@ export function BarcodeScannerDialog({ open, onOpenChange, onScan }: BarcodeScan
 
                 <div className="flex flex-col items-center justify-center aspect-video bg-black rounded-lg overflow-hidden relative">
                     {open ? (
-                        <video ref={ref} className="w-full h-full object-cover" />
+                        <video ref={ref as any} className="w-full h-full object-cover" />
                     ) : (
                         <div className="flex flex-col items-center gap-2 text-gray-500">
                             <CameraOff className="h-10 w-10" />

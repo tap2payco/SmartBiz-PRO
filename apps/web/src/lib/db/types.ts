@@ -67,7 +67,7 @@ export interface LocalCustomer {
     stakeholderType?: 'INDIVIDUAL' | 'BUSINESS'
     name: string
     contactPerson?: string
-    email: string
+    email?: string
     phone?: string
     address?: string
     city?: string

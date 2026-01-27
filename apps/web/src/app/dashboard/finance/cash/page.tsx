@@ -132,7 +132,7 @@ export default function CashManagementPage() {
                                     </p>
                                 )}
                                 <div className="text-2xl font-bold">
-                                    {formatCurrency(account.currentBalance)}
+                                    {formatCurrency(parseFloat(account.currentBalance))}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
                                     Click to view history

@@ -85,7 +85,7 @@ export function SalesChart() {
                                 <Tooltip
                                     cursor={{ fill: 'transparent' }}
                                     contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                                    formatter={(value: number) => [`${value.toLocaleString()}`, 'Revenue']}
+                                    formatter={(value) => [`${(Number(value) || 0).toLocaleString()}`, 'Revenue']}
                                 />
                                 <Bar
                                     dataKey="revenue"

@@ -70,9 +70,11 @@ export default function CustomersPage() {
             if (searchQuery) {
                 const lowerQuery = searchQuery.toLowerCase()
                 return collection.filter(c =>
-                    c.name.toLowerCase().includes(lowerQuery) ||
-                    (c.email && c.email.toLowerCase().includes(lowerQuery)) ||
-                    (c.phone && c.phone.includes(searchQuery))
+                    Boolean(
+                        c.name.toLowerCase().includes(lowerQuery) ||
+                        (c.email && c.email.toLowerCase().includes(lowerQuery)) ||
+                        (c.phone && c.phone.includes(searchQuery))
+                    )
                 ).toArray()
             }
 

@@ -197,7 +197,7 @@ export default function FinancialReportsPage() {
                                         <XAxis dataKey="name" />
                                         <YAxis />
                                         <Tooltip
-                                            formatter={(value: number) => formatCurrency(value)}
+                                            formatter={(value) => formatCurrency(Number(value) || 0)}
                                             cursor={{ fill: 'transparent' }}
                                         />
                                         <Legend />

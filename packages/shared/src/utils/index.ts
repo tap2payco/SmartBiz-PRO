@@ -165,7 +165,7 @@ export function hasPermission(
 
     // Check role-based permissions
     const rolePerms = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS] || [];
-    if (rolePerms.includes(requiredPermission)) return true;
+    if ((rolePerms as readonly string[]).includes(requiredPermission)) return true;
 
     // Check custom user permissions
     if (userPermissions && userPermissions.includes(requiredPermission)) return true;

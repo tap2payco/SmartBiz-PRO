@@ -1,8 +1,8 @@
 
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
-import { SyncStatus } from '../db/types'
-import { syncEngine } from '../sync/engine'
+import { db } from '@/lib/db'
+import { SyncStatus } from '@/lib/db/types'
+import { syncEngine } from '@/lib/sync/engine'
 import { useState, useEffect } from 'react'
 
 export function useOfflineSync() {

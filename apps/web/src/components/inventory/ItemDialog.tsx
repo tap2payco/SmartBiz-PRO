@@ -40,12 +40,12 @@ const itemSchema = z.object({
     barcode: z.string().optional(),
     description: z.string().optional(),
     categoryId: z.string().optional(),
-    unit: z.string().default('pcs'),
-    type: z.enum(['good', 'service']).default('good'),
-    costPrice: z.number().min(0, "Cost price must be positive"),
-    sellingPrice: z.number().min(0, "Selling price must be positive"),
-    reorderPoint: z.number().int().min(0).optional(),
-    reorderQuantity: z.number().int().min(0).optional(),
+    unit: z.string().min(1, "Unit is required"),
+    type: z.enum(['good', 'service']),
+    costPrice: z.coerce.number().min(0, "Cost price must be positive"),
+    sellingPrice: z.coerce.number().min(0, "Selling price must be positive"),
+    reorderPoint: z.coerce.number().int().min(0).optional(),
+    reorderQuantity: z.coerce.number().int().min(0).optional(),
     imageUrl: z.string().optional()
 })
 

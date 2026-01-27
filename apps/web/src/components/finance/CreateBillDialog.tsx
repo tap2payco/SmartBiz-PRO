@@ -21,9 +21,9 @@ const billSchema = z.object({
     invoiceNumber: z.string().min(1, 'Invoice number is required'),
     invoiceDate: z.string().min(1, 'Invoice date is required'),
     dueDate: z.string().optional(),
-    subtotal: z.number().positive('Subtotal must be positive'),
-    taxTotal: z.number().min(0).default(0),
-    totalAmount: z.number().positive('Total must be positive'),
+    subtotal: z.coerce.number().min(0, 'Subtotal must be positive'),
+    taxTotal: z.coerce.number().min(0),
+    totalAmount: z.coerce.number().min(0, 'Total must be positive'),
 })
 
 type BillFormData = z.infer<typeof billSchema>

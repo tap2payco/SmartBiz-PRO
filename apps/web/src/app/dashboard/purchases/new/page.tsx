@@ -59,18 +59,18 @@ export default function CreatePurchaseOrderPage() {
     }
 
     const updateLine = (index: number, field: keyof OrderLine, value: number) => {
-        const newLines = [...lines]
-        const line = newLines[index]
+        setLines(prev => prev.map((line, i) => {
+            if (i !== index) return line
 
-            // Update field
-            (line as any)[field] = value
+            const updated = { ...line, [field]: value }
 
-        // Recalculate total
-        if (field === 'quantity' || field === 'unitCost') {
-            line.totalCost = line.quantity * line.unitCost
-        }
+            // Recalculate total
+            if (field === 'quantity' || field === 'unitCost') {
+                updated.totalCost = updated.quantity * updated.unitCost
+            }
 
-        setLines(newLines)
+            return updated
+        }))
     }
 
     const removeLine = (index: number) => {

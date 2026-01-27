@@ -28,8 +28,8 @@ const accountSchema = z.object({
     type: z.enum(['CASH', 'BANK', 'MOBILE_MONEY']),
     accountNumber: z.string().optional(),
     bankName: z.string().optional(),
-    currency: z.string().default('TZS'),
-    initialBalance: z.number().min(0, 'Balance cannot be negative').default(0)
+    currency: z.string().min(1),
+    initialBalance: z.coerce.number().min(0, 'Balance cannot be negative')
 })
 
 type AccountFormData = z.infer<typeof accountSchema>

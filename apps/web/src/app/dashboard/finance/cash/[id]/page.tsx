@@ -122,7 +122,7 @@ export default function AccountDetailsPage() {
                         <CardTitle className="text-sm font-medium opacity-90">Current Balance</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">{formatCurrency(account.currentBalance)}</div>
+                        <div className="text-3xl font-bold">{formatCurrency(parseFloat(account.currentBalance))}</div>
                         <p className="text-sm opacity-80 mt-1">{account.currency}</p>
                     </CardContent>
                 </Card>
@@ -164,7 +164,7 @@ export default function AccountDetailsPage() {
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">{tx.referenceType}</TableCell>
                                         <TableCell className={`text-right font-medium ${tx.type === 'DEPOSIT' ? 'text-green-600' : 'text-red-600'}`}>
-                                            {tx.type === 'DEPOSIT' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                            {tx.type === 'DEPOSIT' ? '+' : '-'}{formatCurrency(parseFloat(tx.amount))}
                                         </TableCell>
                                     </TableRow>
                                 ))

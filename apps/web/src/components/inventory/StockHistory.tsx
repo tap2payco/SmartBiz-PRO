@@ -36,6 +36,7 @@ export function StockHistory({ movements }: StockHistoryProps) {
                 {sortedMovements.map((movement, movementIdx) => {
                     const isPositive = movement.quantity > 0
                     const isZero = movement.quantity === 0
+                    const isNegative = movement.quantity < 0
 
                     return (
                         <li key={movement.id}>
@@ -50,10 +51,10 @@ export function StockHistory({ movements }: StockHistoryProps) {
                                     <div>
                                         <span
                                             className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-gray-900 ${isZero
-                                                    ? 'bg-gray-400'
-                                                    : isPositive
-                                                        ? 'bg-green-500'
-                                                        : 'bg-red-500'
+                                                ? 'bg-gray-400'
+                                                : isPositive
+                                                    ? 'bg-green-500'
+                                                    : 'bg-red-500'
                                                 }`}
                                         >
                                             {isZero ? (
