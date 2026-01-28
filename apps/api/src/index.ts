@@ -21,13 +21,22 @@ export const app = new Hono<{ Variables: Variables }>();
 app.use('*', logger());
 app.use('*', prettyJSON());
 app.use('*', cors({
-    origin: (origin) => origin, // Reflect origin
+    origin: [
+        'https://smart-biz-pro-web.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:3003'
+    ],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
     maxAge: 600,
     credentials: true,
 }));
+
+// Handle OPTIONS globally to ensure preflight success
+app.options('*', (c) => {
+    return c.body(null, 204);
+});
 
 // Health check
 app.get('/', (c) => {
