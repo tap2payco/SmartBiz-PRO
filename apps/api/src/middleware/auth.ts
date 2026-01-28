@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 
 export async function authMiddleware(c: Context, next: Next) {
     if (c.req.method === 'OPTIONS') {
-        return await next();
+        return c.text('', 204);
     }
 
     const authHeader = c.req.header('Authorization');
