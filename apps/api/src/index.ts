@@ -55,6 +55,40 @@ app.get('/health', (c) => {
     });
 });
 
+app.get('/debug-env', (c) => {
+    const keys = [
+        'DATABASE_URL',
+        'NEXT_PUBLIC_SUPABASE_URL',
+        'SUPABASE_SERVICE_ROLE_KEY',
+        'NEXT_PUBLIC_API_URL',
+        'NODE_ENV'
+    ];
+
+    const status: Record<string, boolean> = {};
+    keys.forEach(key => {
+        status[key] = !!process.env[key];
+    });
+
+    return c.json({
+        env_status: status,
+        vercel_region: process.env.VERCEL_REGION || 'local'
+    });
+});
+
+// Global Error Handler
+app.onError((err, c) => {
+    console.error('GLOBAL ERROR:', err);
+
+    const isConfigError = err.message.includes('configuration missing');
+
+    return c.json({
+        error: isConfigError ? 'Configuration Error' : 'Internal Server Error',
+        message: err.message,
+        code: isConfigError ? 'CONFIG_MISSING' : 'INTERNAL_ERROR',
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    }, 500);
+});
+
 // Auth Routes
 import auth from './routes/auth';
 
