@@ -20,7 +20,14 @@ export const app = new Hono<{ Variables: Variables }>();
 // Middleware
 app.use('*', logger());
 app.use('*', prettyJSON());
-app.use('*', cors());
+app.use('*', cors({
+    origin: (origin) => origin, // Reflect origin
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
+    maxAge: 600,
+    credentials: true,
+}));
 
 // Health check
 app.get('/', (c) => {
@@ -42,9 +49,8 @@ app.get('/health', (c) => {
 // Auth Routes
 import auth from './routes/auth';
 
-// Mount routes
-// Apply middleware to all routes except public ones (like login/register if they existed, but here we use Supabase client mostly)
-// For internal auth routes:
+// Apply auth middleware to all routes except public health check
+app.use('/auth', authMiddleware);
 app.use('/auth/*', authMiddleware);
 app.route('/auth', auth);
 
@@ -62,28 +68,52 @@ import banking from './routes/banking';
 
 // Mount routes
 app.route('/auth', auth);
+
+app.use('/organizations', authMiddleware);
 app.use('/organizations/*', authMiddleware);
 app.route('/organizations', organizations);
+
+app.use('/stakeholders', authMiddleware);
 app.use('/stakeholders/*', authMiddleware);
 app.route('/stakeholders', stakeholders);
+
+app.use('/items', authMiddleware);
 app.use('/items/*', authMiddleware);
 app.route('/items', items);
+
+app.use('/categories', authMiddleware);
 app.use('/categories/*', authMiddleware);
 app.route('/categories', categories);
+
+app.use('/stock-movements', authMiddleware);
 app.use('/stock-movements/*', authMiddleware);
 app.route('/stock-movements', stockMovements);
+
+app.use('/sales', authMiddleware);
 app.use('/sales/*', authMiddleware);
 app.route('/sales', sales);
+
+app.use('/reports', authMiddleware);
 app.use('/reports/*', authMiddleware);
 app.route('/reports', reports);
+
+app.use('/locations', authMiddleware);
 app.use('/locations/*', authMiddleware);
 app.route('/locations', locations);
+
+app.use('/purchases', authMiddleware);
 app.use('/purchases/*', authMiddleware);
 app.route('/purchases', purchases);
+
+app.use('/finance', authMiddleware);
 app.use('/finance/*', authMiddleware);
 app.route('/finance', finance);
+
+app.use('/expenses', authMiddleware);
 app.use('/expenses/*', authMiddleware);
 app.route('/expenses', expensesRoute);
+
+app.use('/banking', authMiddleware);
 app.use('/banking/*', authMiddleware);
 app.route('/banking', banking);
 

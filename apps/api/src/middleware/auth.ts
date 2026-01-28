@@ -5,6 +5,10 @@ import { profiles } from '@smartbiz/db';
 import { eq } from 'drizzle-orm';
 
 export async function authMiddleware(c: Context, next: Next) {
+    if (c.req.method === 'OPTIONS') {
+        return await next();
+    }
+
     const authHeader = c.req.header('Authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
