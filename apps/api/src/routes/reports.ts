@@ -54,8 +54,8 @@ app.get('/pnl', async (c) => {
             .from(expenses)
             .where(and(
                 eq(expenses.organizationId, profile.organizationId),
-                gte(expenses.date, start.toISOString().split('T')[0]), // date is string YYYY-MM-DD
-                lte(expenses.date, end.toISOString().split('T')[0])
+                gte(expenses.expenseDate, start.toISOString().split('T')[0]), // expenseDate is the correct column
+                lte(expenses.expenseDate, end.toISOString().split('T')[0])
             ));
 
         const totalExpenses = parseFloat(expensesResult?.total || '0');

@@ -37,7 +37,7 @@ app.post('/', zValidator('json', createOrgSchema), async (c) => {
     }
 
     try {
-        const result = await db.transaction(async (tx) => {
+        const result = await db.transaction(async (tx: any) => {
             // 1. Create Organization
             // Generate slug from name
             const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

@@ -81,7 +81,7 @@ app.post('/', async (c) => {
         const paidAmount = validated.payment ? validated.payment.amount : 0
 
         // Transactional insert
-        const result = await db.transaction(async (tx) => {
+        const result = await db.transaction(async (tx: any) => {
             // 1. Create Sale
             const [newSale] = await tx.insert(sales).values({
                 organizationId,
@@ -123,9 +123,9 @@ app.post('/', async (c) => {
                 })
 
                 // Decrease quantity on hand
+                // Note: items table does not have quantityOnHand. Stock is managed by movements.
                 await tx.update(items)
                     .set({
-                        quantityOnHand: sql`${items.quantityOnHand} - ${item.quantity}`,
                         updatedAt: new Date()
                     })
                     .where(eq(items.id, item.itemId))

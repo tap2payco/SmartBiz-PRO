@@ -125,7 +125,7 @@ app.post('/transfer', async (c) => {
         }
 
         // Transactionally create movements
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
             // OUT from source
             await tx.insert(stockMovements).values({
                 organizationId,

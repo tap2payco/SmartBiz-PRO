@@ -114,7 +114,7 @@ app.post('/orders', async (c) => {
             });
         }
 
-        const result = await db.transaction(async (tx) => {
+        const result = await db.transaction(async (tx: any) => {
             const [newOrder] = await tx.insert(purchaseOrders).values({
                 organizationId: profile.organizationId,
                 supplierId,
@@ -185,7 +185,7 @@ app.post('/orders/:id/receive', async (c) => {
     }
 
     try {
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
             // 1. Get PO
             const order = await tx.query.purchaseOrders.findFirst({
                 where: and(eq(purchaseOrders.id, id), eq(purchaseOrders.organizationId, profile.organizationId)),
@@ -209,7 +209,7 @@ app.post('/orders/:id/receive', async (c) => {
 
             // 3. Process Items
             for (const item of receivedItems) {
-                const poLine = order.lines.find(l => l.id === item.lineId);
+                const poLine = order.lines.find((l: any) => l.id === item.lineId);
                 if (!poLine) continue;
 
                 const qty = Number(item.quantity);
@@ -252,7 +252,7 @@ app.post('/orders/:id/receive', async (c) => {
                 where: eq(purchaseOrderLines.purchaseOrderId, id)
             });
 
-            const allReceived = updatedLines.every(l => l.receivedQuantity >= l.quantity);
+            const allReceived = updatedLines.every((l: any) => l.receivedQuantity >= l.quantity);
             const newStatus = allReceived ? 'COMPLETED' : 'PARTIAL_RECEIVED';
 
             if (order.status !== newStatus && order.status !== 'COMPLETED') {

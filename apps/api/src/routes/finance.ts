@@ -143,7 +143,7 @@ app.post('/bills/:id/payments', zValidator('json', createPaymentSchema), async (
     const data = c.req.valid('json');
 
     try {
-        const result = await db.transaction(async (tx) => {
+        const result = await db.transaction(async (tx: any) => {
             // Get the bill
             const bill = await tx.query.supplierInvoices.findFirst({
                 where: and(

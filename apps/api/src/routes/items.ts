@@ -101,7 +101,7 @@ app.get('/low-stock', async (c) => {
 
         // For MVP: Return items with reorder point set
         // TODO: Calculate actual stock levels from stock_movements
-        const itemsWithStockInfo = lowStockItems.map(item => ({
+        const itemsWithStockInfo = lowStockItems.map((item: any) => ({
             ...item,
             currentStock: 0, // Placeholder - would be calculated from stock_movements
             isLowStock: true // Since reorder_point > 0 and stock tracking isn't fully implemented
@@ -136,12 +136,12 @@ app.post('/bulk', async (c) => {
             .from(items)
             .where(eq(items.organizationId, organizationId))
 
-        const existingSkus = new Set(existingItems.map(i => i.sku))
+        const existingSkus = new Set(existingItems.map((i: any) => i.sku))
         const newItems: NewItem[] = []
-        const validItems = []
+        const validItems: any[] = []
 
         // 2. Filter valid new items
-        for (const item of validated) {
+        for (const item of validated as any[]) {
             if (!existingSkus.has(item.sku)) {
                 validItems.push(item)
                 newItems.push({
@@ -158,8 +158,6 @@ app.post('/bulk', async (c) => {
                     imageUrl: item.imageUrl,
                     organizationId: organizationId,
                     isActive: true,
-                    quantityOnHand: String(item.quantity || 0) // Initialize quantity if schema supports
-                    // Note: quantityOnHand is usually calculated, but we set initial here if schema allows
                 })
             }
         }
@@ -169,7 +167,7 @@ app.post('/bulk', async (c) => {
         }
 
         // 3. Insert Items and create Stock Movements
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
             const insertedItems = await tx.insert(items).values(newItems).returning()
 
             // Create initial stock movements for items with quantity > 0
@@ -234,8 +232,9 @@ app.post('/', async (c) => {
         }
 
         // Handle initial quantity if provided in single create
+        // Stock management is handled via movements below, so we don't set quantityOnHand directly
         if (validated.quantity && validated.quantity > 0) {
-            newItem.quantityOnHand = String(validated.quantity)
+            // Note: items table doesn't have quantityOnHand column
         }
 
         const [created] = await db.insert(items).values(newItem).returning()

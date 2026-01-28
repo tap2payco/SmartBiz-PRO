@@ -133,7 +133,7 @@ app.post('/transfer', zValidator('json', transferSchema), async (c) => {
     const data = c.req.valid('json');
 
     try {
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
             // 1. Get Source Account
             const [sourceAccount] = await tx
                 .select()
@@ -215,7 +215,7 @@ app.post('/adjust', zValidator('json', adjustSchema), async (c) => {
     const data = c.req.valid('json');
 
     try {
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
             const [account] = await tx
                 .select()
                 .from(bankAccounts)
