@@ -166,9 +166,18 @@ app.use('/banking', authMiddleware);
 app.use('/banking/*', authMiddleware);
 app.route('/banking', banking);
 
-export default {
-    port: 3003,
-    fetch: app.fetch,
-};
+import { serve } from '@hono/node-server'
+
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3001
+
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    console.log(`Server is running on port ${port}`)
+    serve({
+        fetch: app.fetch,
+        port
+    })
+}
+
+export default app
 
 
