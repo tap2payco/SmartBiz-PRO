@@ -6,7 +6,7 @@
         "dev": "bun run --watch src/index.ts",
         "start": "bun run src/index.ts",
         "test": "bun test",
-        "build": "node -e \"const fs = require('fs'); if (!fs.existsSync('public')) fs.mkdirSync('public'); fs.writeFileSync('public/index.html', '<h1>SmartBiz API Running</h1>');\""
+        "build": "ncc build api/index.ts -o dist-api && node -e \"const fs = require('fs'); if (!fs.existsSync('public')) fs.mkdirSync('public'); fs.writeFileSync('public/index.html', '<h1>SmartBiz API Running</h1>');\""
     },
     "dependencies": {
         "@hono/node-server": "^1.19.9",
@@ -15,13 +15,15 @@
         "@smartbiz/shared": "file:../../packages/shared",
         "@supabase/supabase-js": "^2.39.0",
         "dotenv": "^16.3.1",
-        "drizzle-orm": "latest",
+        "drizzle-orm": "^0.31.8",
         "hono": "^4.0.0",
         "postgres": "^3.4.3",
         "zod": "^3.22.4"
     },
     "devDependencies": {
         "@types/node": "^20.10.0",
-        "bun-types": "^1.0.0"
+        "@vercel/ncc": "^0.38.1",
+        "bun-types": "^1.0.0",
+        "typescript": "^5.3.3"
     }
 }
