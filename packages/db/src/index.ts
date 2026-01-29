@@ -13,7 +13,12 @@ export const getDb = () => {
         throw new Error('Database configuration missing');
     }
 
-    const client = postgres(connectionString);
+    const client = postgres(connectionString, {
+        ssl: 'require',
+        max: 10, // Limit connections for serverless
+        idle_timeout: 20,
+        connect_timeout: 10,
+    });
     _db = drizzle(client, { schema });
     return _db;
 };
