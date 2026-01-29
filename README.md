@@ -6,26 +6,25 @@
 
 ### Prerequisites
 
-- **Bun** >= 1.0.0 ([Install Bun](https://bun.sh))
 - **Node.js** >= 18.0.0
-- **pnpm** >= 8.0.0
+- **npm** >= 10.0.0
 - **Supabase CLI** ([Installation Guide](./SUPABASE_CLI_INSTALL.md))
 
 ### Installation
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
 # Initialize Supabase (if not already done)
 supabase init
 supabase start
 
 # Run database migrations
-pnpm db:migrate
+npm run db:migrate
 
 # Start development servers
-pnpm dev
+npm run dev
 ```
 
 ## 📁 Project Structure
@@ -34,7 +33,7 @@ pnpm dev
 SmartBiz PRO/
 ├── apps/
 │   ├── web/              # Next.js PWA (Frontend)
-│   ├── api/              # Bun + Hono API (Backend)
+│   ├── api/              # Node + Hono API (Backend)
 │   └── worker/           # Background jobs (future)
 ├── packages/
 │   ├── ui/               # Shared UI components (shadcn/ui)
@@ -57,7 +56,7 @@ SmartBiz PRO/
 - **Dexie.js** (IndexedDB for offline)
 
 ### Backend
-- **Bun** runtime
+- **Node.js** runtime
 - **Hono** framework
 - **Drizzle ORM**
 - **Zod** validation
@@ -67,35 +66,35 @@ SmartBiz PRO/
 
 ```bash
 # Development
-pnpm dev                  # Start all apps in development mode
-pnpm dev:web              # Start web app only
-pnpm dev:api              # Start API only
+npm run dev                  # Start all apps in development mode
+npm run dev:web              # Start web app only
+npm run dev:api              # Start API only
 
 # Build
-pnpm build                # Build all apps
-pnpm build:web            # Build web app only
-pnpm build:api            # Build API only
+npm run build                # Build all apps
+npm run build:web            # Build web app only
+npm run build:api            # Build API only
 
 # Database
-pnpm db:generate          # Generate Drizzle schema
-pnpm db:migrate           # Run migrations
-pnpm db:studio            # Open Drizzle Studio
+npm run db:generate          # Generate Drizzle schema
+npm run db:migrate           # Run migrations
+npm run db:studio            # Open Drizzle Studio
 
 # Testing
-pnpm test                 # Run all tests
-pnpm test:unit            # Run unit tests
-pnpm test:integration     # Run integration tests
-pnpm test:e2e             # Run E2E tests
+npm run test                 # Run all tests
+npm run test:unit            # Run unit tests
+npm run test:integration     # Run integration tests
+npm run test:e2e             # Run E2E tests
 
 # Code Quality
-pnpm lint                 # Lint all packages
-pnpm format               # Format code with Prettier
-pnpm type-check           # TypeScript type checking
+npm run lint                 # Lint all packages
+npm run format               # Format code with Prettier
+npm run type-check           # TypeScript type checking
 ```
 
 ## 🌐 Development URLs
 
-After running `supabase start` and `pnpm dev`:
+After running `supabase start` and `npm run dev`:
 
 - **Web App**: http://localhost:3000
 - **API**: http://localhost:3001

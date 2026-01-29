@@ -48,13 +48,13 @@ You can find the API keys in **Project Settings** → **API**.
 ```bash
 # Generate migration files from schema
 cd packages/db
-bun run generate
+npm run generate
 
 # Push schema to database
-bun run push
+npm run push
 
 # Or run migrations
-bun run migrate
+npm run migrate
 ```
 
 ## Schema Overview
@@ -133,11 +133,11 @@ const newOrg = await db
 
 ## Scripts
 
-- `bun run generate` - Generate migration files from schema changes
-- `bun run migrate` - Run pending migrations
-- `bun run push` - Push schema directly to database (dev only)
-- `bun run studio` - Open Drizzle Studio (database GUI)
-- `bun run seed` - Seed database with sample data
+- `npm run generate` - Generate migration files from schema changes
+- `npm run migrate` - Run pending migrations
+- `npm run push` - Push schema directly to database (dev only)
+- `npm run studio` - Open Drizzle Studio (database GUI)
+- `npm run seed` - Seed database with sample data
 
 ## Next Steps
 

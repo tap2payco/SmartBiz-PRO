@@ -9,10 +9,10 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "clean": "turbo run clean && rm -rf node_modules",
-    "db:generate": "cd packages/db && bun run generate",
-    "db:migrate": "cd packages/db && bun run migrate",
-    "db:studio": "cd packages/db && bun run studio"
+    "clean": "turbo run clean && rimraf node_modules",
+    "db:generate": "cd packages/db && npm run generate",
+    "db:migrate": "cd packages/db && npm run migrate",
+    "db:studio": "cd packages/db && npm run studio"
   },
   "workspaces": [
     "apps/*",
@@ -21,12 +21,12 @@
   "devDependencies": {
     "@types/node": "^20.10.0",
     "prettier": "^3.1.0",
+    "rimraf": "^5.0.0",
     "turbo": "^1.11.0",
     "typescript": "^5.3.0"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "bun": ">=1.0.0"
+    "node": ">=18.0.0"
   },
   "packageManager": "npm@10.9.4"
 }

@@ -96,10 +96,10 @@ pnpm install
 cd packages/db
 
 # Generate migration files
-bun run generate
+npm run generate
 
 # Push schema to Supabase
-bun run push
+npm run push
 ```
 
 This will create all the tables in your Supabase database.
@@ -186,7 +186,7 @@ Test the connection:
 cd packages/db
 
 # This should connect and show your tables
-bun run studio
+npm run studio
 ```
 
 Open http://localhost:4983 to see Drizzle Studio with your database.
@@ -195,7 +195,7 @@ Open http://localhost:4983 to see Drizzle Studio with your database.
 
 ```bash
 cd packages/db
-bun run seed
+npm run seed
 ```
 
 This will create:
@@ -236,7 +236,7 @@ Once your database is set up:
 1. ✅ Database schema created
 2. ✅ RLS policies configured
 3. ✅ Triggers set up
-4. → Create API application (Bun + Hono)
+4. → Create API application (Node + Hono)
 5. → Create Web application (Next.js)
 6. → Implement authentication
 7. → Build first module (Stakeholders or POS)

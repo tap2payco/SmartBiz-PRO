@@ -3,9 +3,9 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "dev": "bun run --watch src/index.ts",
-        "start": "bun run src/index.ts",
-        "test": "bun test",
+        "dev": "tsx watch src/index.ts",
+        "start": "node dist/index.js",
+        "test": "jest",
         "build": "ncc build api/index.ts -o dist-api && node -e \"const fs = require('fs'); if (!fs.existsSync('public')) fs.mkdirSync('public'); fs.writeFileSync('public/index.html', '<h1>SmartBiz API Running</h1>');\""
     },
     "dependencies": {
@@ -23,7 +23,7 @@
     "devDependencies": {
         "@types/node": "^20.10.0",
         "@vercel/ncc": "^0.38.1",
-        "bun-types": "^1.0.0",
+        "tsx": "^4.7.0",
         "typescript": "^5.3.3"
     }
 }
