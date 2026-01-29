@@ -6,45 +6,44 @@ export const config = {
     runtime: 'nodejs'
 }
 
-let appToHandle: Hono<any>;
+// Fallback app to report the error instead of FUNCTION_INVOCATION_FAILED
+const fallbackApp = new Hono()
 
-try {
-    // Try to import the main app
-    // We use require to avoid top-level crash if something is missing
-    const imported = require('../src/index')
-    appToHandle = imported.app || imported.default?.app || imported.default
-} catch (e: any) {
-    console.error('CRITICAL: Failed to load application:', e)
+fallbackApp.use('*', cors({
+    origin: (origin) => {
+        if (origin === 'https://smart-biz-pro-web.vercel.app' ||
+            origin?.endsWith('.vercel.app') ||
+            origin?.includes('localhost')) {
+            return origin;
+        }
+        return 'https://smart-biz-pro-web.vercel.app';
+    },
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true,
+}))
 
-    // Fallback app to report the error instead of FUNCTION_INVOCATION_FAILED
-    const fallbackApp = new Hono()
+fallbackApp.options('*', (c) => c.body(null, 204))
 
-    fallbackApp.use('*', cors({
-        origin: (origin) => {
-            if (origin === 'https://smart-biz-pro-web.vercel.app' ||
-                origin?.endsWith('.vercel.app') ||
-                origin?.includes('localhost')) {
-                return origin;
-            }
-            return 'https://smart-biz-pro-web.vercel.app';
-        },
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-        credentials: true,
-    }))
+// We wrap the entire execution in a handler that tries to load the real app
+export default async function (req: any, res: any) {
+    try {
+        // Dynamic import is safer for ES modules on Vercel
+        const { app } = await import('../src/index')
+        return handle(app)(req, res)
+    } catch (e: any) {
+        console.error('CRITICAL: Failed to load application:', e)
 
-    fallbackApp.options('*', (c) => c.body(null, 204))
+        fallbackApp.all('*', (c) => {
+            return c.json({
+                error: 'API Initialization Failed',
+                message: e?.message || 'Unknown error',
+                hint: 'Check Vercel logs and ensure all dependencies are in package.json',
+                code: 'INIT_FAILURE',
+                stack: e?.stack
+            }, 500)
+        })
 
-    fallbackApp.all('*', (c) => {
-        return c.json({
-            error: 'API Initialization Failed',
-            message: e?.message || 'Unknown error',
-            hint: 'Check Vercel logs and ensure all dependencies are in package.json',
-            code: 'INIT_FAILURE',
-            stack: e?.stack
-        }, 500)
-    })
-    appToHandle = fallbackApp
+        return handle(fallbackApp)(req, res)
+    }
 }
-
-export default handle(appToHandle)

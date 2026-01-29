@@ -101,11 +101,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             organization_name: string
         }
     ) => {
+        // Use current origin for redirect, or fall back to public app url env
+        const origin = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL;
+
         const { error } = await supabase.auth.signUp({
             email,
             password,
             options: {
                 data: userData,
+                emailRedirectTo: `${origin}/dashboard`,
             },
         })
         if (error) throw error
