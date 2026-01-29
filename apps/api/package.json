@@ -15,7 +15,7 @@
         "@smartbiz/shared": "file:../../packages/shared",
         "@supabase/supabase-js": "^2.39.0",
         "dotenv": "^16.3.1",
-        "drizzle-orm": "^0.31.8",
+        "drizzle-orm": "latest",
         "hono": "^4.0.0",
         "postgres": "^3.4.3",
         "zod": "^3.22.4"
