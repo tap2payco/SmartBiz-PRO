@@ -20,7 +20,14 @@ try {
 
     // Enable CORS for fallback app so preflight works even during failure
     fallbackApp.use('*', cors({
-        origin: 'https://smart-biz-pro-web.vercel.app',
+        origin: (origin) => {
+            if (origin === 'https://smart-biz-pro-web.vercel.app' ||
+                origin?.endsWith('.vercel.app') ||
+                origin?.includes('localhost')) {
+                return origin;
+            }
+            return 'https://smart-biz-pro-web.vercel.app';
+        },
         allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         credentials: true,

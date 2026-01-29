@@ -18,14 +18,17 @@ type Variables = {
 export const app = new Hono<{ Variables: Variables }>();
 
 // Middleware
-app.use('*', logger());
-app.use('*', prettyJSON());
+// 1. CORS MUST be first to handle OPTIONS preflight
 app.use('*', cors({
-    origin: [
-        'https://smart-biz-pro-web.vercel.app',
-        'http://localhost:3000',
-        'http://localhost:3003'
-    ],
+    origin: (origin) => {
+        // Allow Vercel production, preview and local development
+        if (origin === 'https://smart-biz-pro-web.vercel.app' ||
+            origin?.endsWith('.vercel.app') ||
+            origin?.includes('localhost')) {
+            return origin;
+        }
+        return 'https://smart-biz-pro-web.vercel.app'; // Default fallback
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
@@ -33,10 +36,13 @@ app.use('*', cors({
     credentials: true,
 }));
 
-// Handle OPTIONS globally to ensure preflight success
+// 2. Handle OPTIONS globally to ensure preflight success immediately
 app.options('*', (c) => {
     return c.body(null, 204);
 });
+
+app.use('*', logger());
+app.use('*', prettyJSON());
 
 // Health check
 app.get('/', (c) => {
