@@ -9,16 +9,16 @@ export const config = {
 let appToHandle: Hono<any>;
 
 try {
-    // Dynamic import to catch errors
-    const { app } = require('../src/index')
-    appToHandle = app
+    // Try to import the main app
+    // We use require to avoid top-level crash if something is missing
+    const imported = require('../src/index')
+    appToHandle = imported.app || imported.default?.app || imported.default
 } catch (e: any) {
-    console.error('CRITICAL: Failed to import app:', e)
+    console.error('CRITICAL: Failed to load application:', e)
 
-    // Create a minimal app that reports the error AND has CORS
+    // Fallback app to report the error instead of FUNCTION_INVOCATION_FAILED
     const fallbackApp = new Hono()
 
-    // Enable CORS for fallback app so preflight works even during failure
     fallbackApp.use('*', cors({
         origin: (origin) => {
             if (origin === 'https://smart-biz-pro-web.vercel.app' ||
@@ -33,18 +33,17 @@ try {
         credentials: true,
     }))
 
-    // Handle preflight explicitly
     fallbackApp.options('*', (c) => c.body(null, 204))
 
     fallbackApp.all('*', (c) => {
         return c.json({
-            error: 'Server Initialization Failed',
-            message: e?.message || 'Unknown import error',
-            code: 'IMPORT_FAILURE',
-            stack: process.env.NODE_ENV === 'development' ? e?.stack : undefined
+            error: 'API Initialization Failed',
+            message: e?.message || 'Unknown error',
+            hint: 'Check Vercel logs and ensure all dependencies are in package.json',
+            code: 'INIT_FAILURE',
+            stack: e?.stack
         }, 500)
     })
-
     appToHandle = fallbackApp
 }
 
