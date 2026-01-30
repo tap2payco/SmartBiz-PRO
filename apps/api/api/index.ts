@@ -34,7 +34,7 @@ export default async function (req: any, res: any) {
             const { app } = await import('../src/index');
 
             // If everything is fine, let Hono handle it
-            return handle(app)(req, res);
+            return (handle(app) as any)(req, res);
 
         } catch (appErr: any) {
             console.error('API_BOOT_ERROR (Application Logic):', appErr);
@@ -49,7 +49,7 @@ export default async function (req: any, res: any) {
                 details: process.env.NODE_ENV !== 'production' ? appErr?.stack : undefined
             }, 500));
 
-            return handle(fallback)(req, res);
+            return (handle(fallback) as any)(req, res);
         }
     } catch (infraErr: any) {
         console.error('API_BOOT_ERROR (Infrastructure):', infraErr);

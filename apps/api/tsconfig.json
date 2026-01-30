@@ -7,16 +7,13 @@
         "allowJs": true,
         "checkJs": false,
         "outDir": "./dist",
-        "rootDir": "./src",
-        "strict": true,
-        "skipLibCheck": true,
-        "esModuleInterop": true,
         "types": [
             "node"
         ]
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "api/**/*"
     ],
     "exclude": [
         "node_modules",

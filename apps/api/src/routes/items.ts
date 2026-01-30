@@ -226,9 +226,19 @@ app.post('/', async (c) => {
         const validated = createItemSchema.parse(body)
 
         const newItem: NewItem = {
-            ...validated,
             organizationId: organizationId,
-            isActive: true
+            isActive: true,
+            name: validated.name,
+            sku: validated.sku,
+            barcode: validated.barcode,
+            description: validated.description,
+            categoryId: validated.categoryId,
+            unit: validated.unit,
+            costPrice: validated.costPrice,
+            sellingPrice: validated.sellingPrice,
+            reorderPoint: validated.reorderPoint,
+            reorderQuantity: validated.reorderQuantity,
+            imageUrl: validated.imageUrl
         }
 
         // Handle initial quantity if provided in single create

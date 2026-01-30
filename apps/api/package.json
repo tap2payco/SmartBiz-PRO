@@ -4,7 +4,7 @@
     "private": true,
     "scripts": {
         "dev": "tsx watch src/index.ts",
-        "start": "node dist/index.js",
+        "start": "node dist-api/index.js",
         "test": "jest",
         "build": "ncc build api/index.ts -o dist-api && node -e \"const fs = require('fs'); if (!fs.existsSync('public')) fs.mkdirSync('public'); fs.writeFileSync('public/index.html', '<h1>SmartBiz API Running</h1>');\""
     },

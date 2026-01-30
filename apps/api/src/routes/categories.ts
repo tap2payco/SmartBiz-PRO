@@ -55,9 +55,11 @@ app.post('/', async (c) => {
         const validated = createCategorySchema.parse(body)
 
         const newCategory: NewItemCategory = {
-            ...validated,
             organizationId: organizationId,
-            isActive: true
+            isActive: true,
+            name: validated.name,
+            description: validated.description,
+            parentId: validated.parentId
         }
 
         const [created] = await db.insert(itemCategories).values(newCategory).returning()
