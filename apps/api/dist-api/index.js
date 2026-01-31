@@ -251,7 +251,7 @@ const config = {
         try {
             // Step 2: Try to load the actual application logic
             // We use a relative path that should work in Vercel's environment
-            const { app } = await Promise.all(/* import() */[__nccwpck_require__.e(534), __nccwpck_require__.e(133), __nccwpck_require__.e(51)]).then(__nccwpck_require__.bind(__nccwpck_require__, 6741));
+            const { app } = await Promise.all(/* import() */[__nccwpck_require__.e(534), __nccwpck_require__.e(763), __nccwpck_require__.e(51)]).then(__nccwpck_require__.bind(__nccwpck_require__, 6741));
             // If everything is fine, let Hono handle it
             return handle(app)(req, res);
         }

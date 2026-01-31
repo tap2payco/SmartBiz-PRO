@@ -119,30 +119,30 @@ const supabase = new Proxy({}, {
 });
 const supabaseAdmin = supabase;
 
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/postgres-js/driver.js + 22 modules
-var driver = __webpack_require__(1704);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/postgres-js/driver.js + 23 modules
+var driver = __webpack_require__(2149);
 // EXTERNAL MODULE: ../../node_modules/postgres/src/index.js + 9 modules
 var src = __webpack_require__(8074);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/enum.js
-var columns_enum = __webpack_require__(6458);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/table.js
-var table = __webpack_require__(7168);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/uuid.js
-var uuid = __webpack_require__(4356);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/varchar.js
-var varchar = __webpack_require__(4654);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/jsonb.js
-var jsonb = __webpack_require__(8107);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/timestamp.js
-var timestamp = __webpack_require__(3803);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/text.js
-var columns_text = __webpack_require__(9616);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/boolean.js
-var columns_boolean = __webpack_require__(591);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/integer.js
-var integer = __webpack_require__(1193);
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/relations.js + 2 modules
-var relations = __webpack_require__(248);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/enum.js
+var columns_enum = __webpack_require__(3785);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/table.js + 23 modules
+var table = __webpack_require__(21);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/uuid.js
+var uuid = __webpack_require__(9627);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/varchar.js
+var varchar = __webpack_require__(5671);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/jsonb.js
+var jsonb = __webpack_require__(5982);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/timestamp.js
+var timestamp = __webpack_require__(4374);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/text.js
+var columns_text = __webpack_require__(1447);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/boolean.js
+var columns_boolean = __webpack_require__(742);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/integer.js
+var integer = __webpack_require__(2164);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/relations.js + 1 modules
+var relations = __webpack_require__(7356);
 ;// CONCATENATED MODULE: ../../packages/db/src/schema/auth.ts
 
 
@@ -238,8 +238,8 @@ const profilesRelations = (0,relations/* relations */.K1)(profiles, ({ one }) =>
     }),
 }));
 
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/numeric.js
-var numeric = __webpack_require__(2540);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/numeric.js
+var numeric = __webpack_require__(9893);
 ;// CONCATENATED MODULE: ../../packages/db/src/schema/stakeholders.ts
 
 
@@ -527,8 +527,8 @@ const paymentsRelations = (0,relations/* relations */.K1)(payments, ({ one }) =>
     }),
 }));
 
-// EXTERNAL MODULE: ../../packages/db/node_modules/drizzle-orm/pg-core/columns/date.js
-var date = __webpack_require__(7671);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/pg-core/columns/date.js
+var date = __webpack_require__(656);
 ;// CONCATENATED MODULE: ../../packages/db/src/schema/purchases.ts
 
 
@@ -906,8 +906,8 @@ const db = new Proxy({}, {
 // Re-export all schema for convenience
 
 
-// EXTERNAL MODULE: ./node_modules/drizzle-orm/sql/expressions/conditions.js
-var conditions = __webpack_require__(8240);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/sql/expressions/conditions.js
+var conditions = __webpack_require__(7763);
 ;// CONCATENATED MODULE: ./src/middleware/auth.ts
 
 
@@ -1553,8 +1553,8 @@ auth_app.delete('/users/:id', async (c) => {
 });
 /* harmony default export */ const auth = (auth_app);
 
-// EXTERNAL MODULE: ./node_modules/drizzle-orm/sql/expressions/select.js
-var expressions_select = __webpack_require__(2090);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/sql/expressions/select.js
+var expressions_select = __webpack_require__(7581);
 ;// CONCATENATED MODULE: ./src/routes/stakeholders.ts
 
 
@@ -1685,8 +1685,8 @@ stakeholdersApp.delete('/:id', async (c) => {
 
 // EXTERNAL MODULE: ../../node_modules/zod/v3/ZodError.js
 var ZodError = __webpack_require__(5765);
-// EXTERNAL MODULE: ./node_modules/drizzle-orm/sql/sql.js + 5 modules
-var sql = __webpack_require__(9811);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/sql/sql.js
+var sql = __webpack_require__(3361);
 ;// CONCATENATED MODULE: ./src/routes/items.ts
 
 
@@ -2642,8 +2642,8 @@ locations_app.delete('/:id', async (c) => {
 });
 /* harmony default export */ const routes_locations = (locations_app);
 
-// EXTERNAL MODULE: ./node_modules/drizzle-orm/sql/functions/aggregate.js
-var aggregate = __webpack_require__(3113);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/sql/functions/aggregate.js
+var aggregate = __webpack_require__(4192);
 ;// CONCATENATED MODULE: ./src/routes/purchases.ts
 
 
