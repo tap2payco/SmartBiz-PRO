@@ -181,3 +181,5 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
 export default app
 
 
+
+// Force redeploy: Verifying CORS and DB connection fixes
