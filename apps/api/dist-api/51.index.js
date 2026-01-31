@@ -887,14 +887,24 @@ const getDb = () => {
         console.error('CRITICAL: Missing DATABASE_URL environment variable');
         throw new Error('Database configuration missing');
     }
-    const client = (0,src/* default */.A)(connectionString, {
-        ssl: 'require',
-        max: 10, // Limit connections for serverless
-        idle_timeout: 20,
-        connect_timeout: 10,
-    });
-    _db = (0,driver/* drizzle */.f)(client, { schema: schema_namespaceObject });
-    return _db;
+    // Log partial connection string for debugging (hide credentials)
+    console.log('[DB] Connecting to:', connectionString.replace(/:[^:@]*@/, ':****@'));
+    try {
+        const client = (0,src/* default */.A)(connectionString, {
+            ssl: 'require',
+            max: 1, // Serverless: Use single connection per lambda to avoid exhausting pool
+            idle_timeout: 20,
+            connect_timeout: 10,
+            prepare: false, // Disable prepared statements for transaction pooler compatibility
+        });
+        _db = (0,driver/* drizzle */.f)(client, { schema: schema_namespaceObject });
+        console.log('[DB] Connection initialized successfully');
+        return _db;
+    }
+    catch (error) {
+        console.error('[DB] Connection Failed:', error);
+        throw error;
+    }
 };
 // Lazy-loaded database instance using Proxy
 const db = new Proxy({}, {
@@ -3609,6 +3619,7 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
     });
 }
 /* harmony default export */ const src_0 = ((/* unused pure expression or super */ null && (src_app)));
+// Force redeploy: Verifying CORS and DB connection fixes
 
 
 /***/ }),
