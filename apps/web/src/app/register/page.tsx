@@ -12,7 +12,6 @@ export default function RegisterPage() {
         confirmPassword: '',
         firstName: '',
         lastName: '',
-        organizationName: '',
     })
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
@@ -40,9 +39,8 @@ export default function RegisterPage() {
             await signUp(formData.email, formData.password, {
                 first_name: formData.firstName,
                 last_name: formData.lastName,
-                organization_name: formData.organizationName,
             })
-            router.push('/dashboard')
+            router.push('/onboarding')
         } catch (err: any) {
             setError(err.message || 'Failed to create account')
         } finally {
@@ -100,20 +98,7 @@ export default function RegisterPage() {
                             </div>
                         </div>
 
-                        <div>
-                            <label htmlFor="organizationName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Organization Name
-                            </label>
-                            <input
-                                id="organizationName"
-                                type="text"
-                                required
-                                value={formData.organizationName}
-                                onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                                placeholder="Your Company Ltd"
-                            />
-                        </div>
+
 
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
