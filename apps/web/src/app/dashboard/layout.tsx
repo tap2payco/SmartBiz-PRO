@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
