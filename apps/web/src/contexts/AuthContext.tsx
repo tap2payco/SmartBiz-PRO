@@ -15,7 +15,6 @@ interface AuthContextType {
     signUp: (email: string, password: string, userData: {
         first_name: string
         last_name: string
-        organization_name: string
     }) => Promise<void>
     signOut: () => Promise<void>
     refreshProfile: () => Promise<void>
@@ -98,7 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userData: {
             first_name: string
             last_name: string
-            organization_name: string
         }
     ) => {
         // Use current origin for redirect, or fall back to public app url env

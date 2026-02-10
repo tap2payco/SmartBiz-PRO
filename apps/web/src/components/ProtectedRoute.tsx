@@ -5,9 +5,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const { user, profile, loading } = useAuth()
+    const { user, loading } = useAuth()
     const router = useRouter()
-    const pathname = usePathname()
 
     useEffect(() => {
         if (loading) return
@@ -16,23 +15,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
             router.push('/login')
             return
         }
-
-        // Check if user has explicitly skipped onboarding for this session
-        const hasSkipped = typeof window !== 'undefined' ? sessionStorage.getItem('skipOnboarding') === 'true' : false
-
-        // If user is logged in but has no profile/organization, forced to onboarding UNLESS skipped
-        if (user && !profile && pathname !== '/onboarding' && !hasSkipped) {
-            router.push('/onboarding')
-            return
-        }
-
-        // If user has profile but is trying to access onboarding, redirect to dashboard
-        if (user && profile && pathname === '/onboarding') {
-            router.push('/dashboard')
-            return
-        }
-
-    }, [user, profile, loading, router, pathname])
+    }, [user, loading, router])
 
     if (loading) {
         return (
@@ -46,11 +29,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     }
 
     if (!user) return null
-    if (!profile && pathname !== '/onboarding') return null
-
-    if (!user) {
-        return null
-    }
 
     return <>{children}</>
 }
