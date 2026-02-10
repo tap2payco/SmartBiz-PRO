@@ -21,13 +21,14 @@ export const app = new Hono<{ Variables: Variables }>();
 // 1. CORS MUST be first to handle OPTIONS preflight
 app.use('*', cors({
     origin: (origin) => {
-        // Allow Vercel production, preview and local development
+        // Allow Vercel, Render, and local development
         if (origin === 'https://smart-biz-pro-web.vercel.app' ||
             origin?.endsWith('.vercel.app') ||
+            origin?.endsWith('.onrender.com') ||
             origin?.includes('localhost')) {
             return origin;
         }
-        return 'https://smart-biz-pro-web.vercel.app'; // Default fallback
+        return 'https://smartbiz-pro.onrender.com'; // Default fallback
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
