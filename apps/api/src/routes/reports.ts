@@ -176,7 +176,7 @@ app.get('/sales-chart', async (c) => {
 
         // Fill in days with zero revenue so the chart has no gaps
         const chartData: { date: string; revenue: number }[] = [];
-        const revenueMap = new Map(results.map(r => [r.date, parseFloat(r.revenue || '0')]));
+        const revenueMap: Map<string, number> = new Map(results.map(r => [r.date, parseFloat(r.revenue || '0')]));
 
         for (let i = 0; i < days; i++) {
             const d = new Date(startDate);
@@ -184,7 +184,7 @@ app.get('/sales-chart', async (c) => {
             const dateStr = d.toISOString().split('T')[0];
             chartData.push({
                 date: dateStr,
-                revenue: revenueMap.get(dateStr) || 0,
+                revenue: revenueMap.get(dateStr) ?? 0,
             });
         }
 
