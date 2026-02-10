@@ -5,8 +5,10 @@
     "scripts": {
         "dev": "tsx watch src/index.ts",
         "start": "node dist-api/index.js",
+        "start:render": "node dist-server/index.js",
         "test": "jest",
-        "build": "npx ncc build api/index.ts -o dist-api && node -e \"const fs = require('fs'); if (!fs.existsSync('public')) fs.mkdirSync('public'); fs.writeFileSync('public/index.html', '<h1>SmartBiz API Running</h1>');\""
+        "build": "npx ncc build api/index.ts -o dist-api && node -e \"const fs = require('fs'); if (!fs.existsSync('public')) fs.mkdirSync('public'); fs.writeFileSync('public/index.html', '<h1>SmartBiz API Running</h1>');\"",
+        "build:render": "npx ncc build src/index.ts -o dist-server"
     },
     "dependencies": {
         "@hono/node-server": "^1.19.9",
