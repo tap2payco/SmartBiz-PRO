@@ -6,7 +6,7 @@ import {
     expenses,
     items
 } from '@smartbiz/db';
-import { eq, and, sql, gte, lte } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, desc } from 'drizzle-orm';
 import { User } from '@supabase/supabase-js';
 import { Profile } from '@smartbiz/shared';
 
@@ -96,6 +96,140 @@ app.get('/pnl', async (c) => {
     } catch (error) {
         console.error('P&L Report Error:', error);
         return c.json({ error: 'Failed to generate report' }, 500);
+    }
+});
+
+// GET /reports/dashboard — Dashboard summary stats
+app.get('/dashboard', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
+
+    try {
+        // Total revenue (all time, completed sales)
+        const [revenueResult] = await db
+            .select({ total: sql<string>`sum(${sales.totalAmount})` })
+            .from(sales)
+            .where(and(
+                eq(sales.organizationId, profile.organizationId),
+                eq(sales.status, 'COMPLETED')
+            ));
+
+        // Total number of orders
+        const [orderCountResult] = await db
+            .select({ count: sql<string>`count(*)` })
+            .from(sales)
+            .where(and(
+                eq(sales.organizationId, profile.organizationId),
+                eq(sales.status, 'COMPLETED')
+            ));
+
+        // Today's revenue
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const [todayResult] = await db
+            .select({ total: sql<string>`sum(${sales.totalAmount})` })
+            .from(sales)
+            .where(and(
+                eq(sales.organizationId, profile.organizationId),
+                eq(sales.status, 'COMPLETED'),
+                gte(sales.createdAt, todayStart)
+            ));
+
+        return c.json({
+            totalRevenue: parseFloat(revenueResult?.total || '0'),
+            totalOrders: parseInt(orderCountResult?.count || '0'),
+            todayRevenue: parseFloat(todayResult?.total || '0'),
+        });
+    } catch (error) {
+        console.error('Dashboard Report Error:', error);
+        return c.json({ error: 'Failed to generate dashboard report' }, 500);
+    }
+});
+
+// GET /reports/sales-chart?range=7d|30d|90d — Daily revenue for chart
+app.get('/sales-chart', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const range = c.req.query('range') || '7d';
+    const days = range === '90d' ? 90 : range === '30d' ? 30 : 7;
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    try {
+        const results = await db
+            .select({
+                date: sql<string>`DATE(${sales.createdAt})`,
+                revenue: sql<string>`sum(${sales.totalAmount})`,
+            })
+            .from(sales)
+            .where(and(
+                eq(sales.organizationId, profile.organizationId),
+                eq(sales.status, 'COMPLETED'),
+                gte(sales.createdAt, startDate)
+            ))
+            .groupBy(sql`DATE(${sales.createdAt})`)
+            .orderBy(sql`DATE(${sales.createdAt})`);
+
+        // Fill in days with zero revenue so the chart has no gaps
+        const chartData: { date: string; revenue: number }[] = [];
+        const revenueMap = new Map(results.map(r => [r.date, parseFloat(r.revenue || '0')]));
+
+        for (let i = 0; i < days; i++) {
+            const d = new Date(startDate);
+            d.setDate(d.getDate() + i);
+            const dateStr = d.toISOString().split('T')[0];
+            chartData.push({
+                date: dateStr,
+                revenue: revenueMap.get(dateStr) || 0,
+            });
+        }
+
+        return c.json(chartData);
+    } catch (error) {
+        console.error('Sales Chart Error:', error);
+        return c.json({ error: 'Failed to generate sales chart' }, 500);
+    }
+});
+
+// GET /reports/top-products?limit=5 — Top selling products
+app.get('/top-products', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const limit = parseInt(c.req.query('limit') || '5');
+
+    try {
+        const results = await db
+            .select({
+                itemId: saleItems.itemId,
+                name: items.name,
+                totalQuantity: sql<string>`sum(${saleItems.quantity})`,
+                totalRevenue: sql<string>`sum(${saleItems.quantity} * ${saleItems.unitPrice})`,
+            })
+            .from(saleItems)
+            .innerJoin(sales, eq(saleItems.saleId, sales.id))
+            .innerJoin(items, eq(saleItems.itemId, items.id))
+            .where(and(
+                eq(sales.organizationId, profile.organizationId),
+                eq(sales.status, 'COMPLETED')
+            ))
+            .groupBy(saleItems.itemId, items.name)
+            .orderBy(desc(sql`sum(${saleItems.quantity})`))
+            .limit(limit);
+
+        return c.json(results.map(r => ({
+            itemId: r.itemId,
+            name: r.name,
+            totalQuantity: parseInt(r.totalQuantity || '0'),
+            totalRevenue: parseFloat(r.totalRevenue || '0'),
+        })));
+    } catch (error) {
+        console.error('Top Products Error:', error);
+        return c.json({ error: 'Failed to generate top products report' }, 500);
     }
 });
 
