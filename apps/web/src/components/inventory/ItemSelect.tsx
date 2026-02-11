@@ -22,9 +22,10 @@ import { useAuth } from "@/contexts/AuthContext"
 interface ItemSelectProps {
     value?: string
     onSelect: (item: any) => void
+    trigger?: React.ReactNode
 }
 
-export function ItemSelect({ value, onSelect }: ItemSelectProps) {
+export function ItemSelect({ value, onSelect, trigger }: ItemSelectProps) {
     const [open, setOpen] = React.useState(false)
     const [items, setItems] = React.useState<any[]>([])
     const [loading, setLoading] = React.useState(false)
@@ -59,17 +60,21 @@ export function ItemSelect({ value, onSelect }: ItemSelectProps) {
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between"
-                >
-                    {value
-                        ? selectedItem?.name
-                        : "Select item..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
+                {trigger ? (
+                    trigger
+                ) : (
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between"
+                    >
+                        {value
+                            ? selectedItem?.name
+                            : "Select item..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                )}
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0">
                 <Command>

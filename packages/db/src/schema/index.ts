@@ -7,3 +7,5 @@ export * from './purchases';
 export * from './expenses';
 export * from './banking';
 export * from './returns';
+export * from './quotations';
+

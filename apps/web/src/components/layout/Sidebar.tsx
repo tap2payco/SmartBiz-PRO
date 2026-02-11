@@ -29,6 +29,7 @@ const NAVIGATION = [
     { name: 'POS', href: '/dashboard/pos', icon: ShoppingCart },
     { name: 'Inventory', href: '/dashboard/inventory', icon: Package },
     { name: 'Sales', href: '/dashboard/sales', icon: FileText },
+    { name: 'Quotations', href: '/dashboard/sales/quotations', icon: FileText },
     { name: 'Returns', href: '/dashboard/sales/returns', icon: RotateCcw },
     { name: 'Receivables', href: '/dashboard/sales/invoices', icon: Wallet },
     { name: 'Customers', href: '/dashboard/customers', icon: Users },

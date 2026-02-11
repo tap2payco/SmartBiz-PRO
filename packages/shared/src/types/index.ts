@@ -181,6 +181,7 @@ export interface PaginatedResponse<T> {
     };
 }
 
+
 // Returns
 export interface Return extends BaseEntity {
     saleId: string;
@@ -208,6 +209,37 @@ export interface ReturnItem {
     condition: 'GOOD' | 'DAMAGED' | 'EXPIRED' | 'OTHER';
     restock: boolean;
     reason?: string;
+    // Relations
+    item?: any;
+}
+
+// Quotations
+export interface Quotation extends BaseEntity {
+    quotationNumber: string;
+    customerId?: string;
+    status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CONVERTED';
+    validUntil?: string; // ISO Date
+    subtotal: number;
+    taxTotal: number;
+    totalAmount: number;
+    notes?: string;
+    terms?: string;
+    convertedSaleId?: string;
+    items?: QuotationItem[];
+    // Relations
+    customer?: Stakeholder;
+}
+
+export interface QuotationItem {
+    id: string;
+    quotationId: string;
+    itemId: string;
+    quantity: number;
+    unitPrice: number;
+    taxRate: number;
+    taxAmount: number;
+    total: number;
+    notes?: string;
     // Relations
     item?: any;
 }
