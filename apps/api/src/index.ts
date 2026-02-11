@@ -115,6 +115,7 @@ import purchases from './routes/purchases';
 import finance from './routes/finance';
 import expensesRoute from './routes/expenses';
 import banking from './routes/banking';
+import returns from './routes/returns';
 
 // Mount routes
 app.route('/auth', auth);
@@ -166,6 +167,10 @@ app.route('/expenses', expensesRoute);
 app.use('/banking', authMiddleware);
 app.use('/banking/*', authMiddleware);
 app.route('/banking', banking);
+
+app.use('/returns', authMiddleware);
+app.use('/returns/*', authMiddleware);
+app.route('/returns', returns);
 
 import { serve } from '@hono/node-server'
 

@@ -22,6 +22,13 @@
       "when": 1770719255342,
       "tag": "0002_quiet_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770793011661,
+      "tag": "0003_spotty_matthew_murdock",
+      "breakpoints": true
     }
   ]
 }

@@ -178,6 +178,36 @@ export interface PaginatedResponse<T> {
         page: number;
         limit: number;
         total: number;
-        totalPages: number;
     };
+}
+
+// Returns
+export interface Return extends BaseEntity {
+    saleId: string;
+    customerId?: string;
+    returnNumber: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+    refundStatus: 'PENDING' | 'PARTIAL' | 'REFUNDED' | 'CREDITED';
+    totalAmount: number;
+    refundedAmount: number;
+    reason?: string;
+    notes?: string;
+    items?: ReturnItem[];
+    // Relations
+    customer?: Stakeholder;
+    sale?: any;
+}
+
+export interface ReturnItem {
+    id: string;
+    returnId: string;
+    itemId: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    condition: 'GOOD' | 'DAMAGED' | 'EXPIRED' | 'OTHER';
+    restock: boolean;
+    reason?: string;
+    // Relations
+    item?: any;
 }
