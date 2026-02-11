@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { db } from '@smartbiz/db';
-import { stakeholders } from '@smartbiz/db';
+import { stakeholders, sales } from '@smartbiz/db/src/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 const stakeholdersApp = new Hono<{ Variables: { user: any; organizationId: string } }>();
@@ -49,6 +49,7 @@ stakeholdersApp.get('/:id', async (c) => {
     const id = c.req.param('id');
     const organizationId = c.get('organizationId');
 
+    // 1. Get Stakeholder
     const result = await db
         .select()
         .from(stakeholders)
@@ -64,7 +65,41 @@ stakeholdersApp.get('/:id', async (c) => {
         return c.json({ error: 'Stakeholder not found' }, 404);
     }
 
-    return c.json({ stakeholder: result[0] });
+    const stakeholder = result[0];
+
+    // 2. Calculate Outstanding Debt
+    // Sum of (totalAmount - paidAmount) for all sales that are NOT 'PAID'
+    const salesDebt = await db
+        .select({
+            totalDebt: sql<string>`sum(${sales.totalAmount} - ${sales.paidAmount})`,
+            overdueDebt: sql<string>`sum(CASE WHEN ${sales.dueDate} < NOW() THEN (${sales.totalAmount} - ${sales.paidAmount}) ELSE 0 END)`
+        })
+        .from(sales)
+        .where(
+            and(
+                eq(sales.customerId, id),
+                eq(sales.organizationId, organizationId),
+                sql`${sales.paymentStatus} != 'PAID'`
+            )
+        );
+
+    const outstandingDebt = parseFloat(salesDebt[0]?.totalDebt || '0');
+    const overdueAmount = parseFloat(salesDebt[0]?.overdueDebt || '0');
+
+    // 3. Calculate Available Credit
+    let availableCredit = 0;
+    if (stakeholder.creditLimit) {
+        availableCredit = Math.max(0, parseFloat(stakeholder.creditLimit) - outstandingDebt);
+    }
+
+    return c.json({
+        stakeholder: {
+            ...stakeholder,
+            outstandingDebt,
+            overdueAmount,
+            availableCredit
+        }
+    });
 });
 
 // POST /stakeholders - Create new

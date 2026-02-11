@@ -19,6 +19,7 @@ export const sales = pgTable('sales', {
     saleNumber: varchar('sale_number', { length: 50 }).notNull(),
     status: saleStatusEnum('status').notNull().default('COMPLETED'),
     paymentStatus: paymentStatusEnum('payment_status').notNull().default('PENDING'),
+    dueDate: timestamp('due_date'),
 
     subtotal: decimal('subtotal', { precision: 15, scale: 2 }).notNull().default('0'),
     taxTotal: decimal('tax_total', { precision: 15, scale: 2 }).notNull().default('0'),

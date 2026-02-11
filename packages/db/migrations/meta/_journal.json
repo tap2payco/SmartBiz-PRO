@@ -15,6 +15,13 @@
       "when": 1768725262341,
       "tag": "0001_melodic_kulan_gath",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770719255342,
+      "tag": "0002_quiet_pestilence",
+      "breakpoints": true
     }
   ]
 }

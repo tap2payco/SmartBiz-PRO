@@ -32,6 +32,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { queueOperation } from '@/lib/db/ops'
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner'
 import { BarcodeScannerDialog } from '@/components/shared/BarcodeScannerDialog'
+import { CheckoutModal } from '@/components/pos/CheckoutModal'
 import { Camera } from 'lucide-react'
 
 interface CartItem {
@@ -51,6 +52,8 @@ export default function POSPage() {
     const [organization, setOrganization] = useState<any>(null)
     const [accounts, setAccounts] = useState<any[]>([])
     const [selectedAccountId, setSelectedAccountId] = useState<string>('')
+    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+    const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
 
     // Fetch organization and accounts locally to be reactive to setup
     useEffect(() => {
@@ -139,7 +142,36 @@ export default function POSPage() {
         setCart(prev => prev.filter(item => item.id !== id))
     }
 
-    const handleCompleteSale = async () => {
+    // Fetch customer details (credit info) when customerId changes
+    useEffect(() => {
+        const fetchCustomer = async () => {
+            if (!customerId) {
+                setSelectedCustomer(null)
+                return
+            }
+            try {
+                const token = await getToken()
+                if (!token) return
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stakeholders/${customerId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                if (res.ok) {
+                    const data = await res.json()
+                    setSelectedCustomer(data.stakeholder)
+                }
+            } catch (error) {
+                console.error('Failed to fetch customer:', error)
+            }
+        }
+        fetchCustomer()
+    }, [customerId, getToken])
+
+    const handleCompleteSale = async (payment: {
+        amount: number
+        method: 'CASH' | 'MOBILE_MONEY' | 'CARD' | 'BANK_TRANSFER' | 'CREDIT'
+        accountId?: string
+        reference?: string
+    }) => {
         if (cart.length === 0) {
             toast.error('Cart is empty')
             return
@@ -151,6 +183,9 @@ export default function POSPage() {
             return
         }
 
+        const paidAmount = payment.amount
+        const isCreditSale = paidAmount < totals.total
+
         const saleId = uuidv4()
         const saleNumber = `SALE-${Date.now()}`
 
@@ -160,12 +195,12 @@ export default function POSPage() {
             saleNumber,
             customerId,
             status: 'COMPLETED' as const,
-            paymentStatus: 'PAID' as const,
+            paymentStatus: (paidAmount >= totals.total ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING')) as any,
             subtotal: totals.subtotal,
             taxTotal: totals.tax,
             discountTotal: 0,
             totalAmount: totals.total,
-            paidAmount: totals.total,
+            paidAmount: paidAmount,
             createdAt: Date.now(),
             syncedAt: 0
         }
@@ -183,26 +218,22 @@ export default function POSPage() {
         }))
 
         try {
-            // In a real app, this should be a single multi-table transaction
-            // For this MVP version, we'll queue them
             await queueOperation('sales', 'CREATE', localSale, saleId)
 
-            // Note: saleItems are usually nested in the API call for 'sales'
-            // So we send the whole object in the outbox for the sync engine
-            // Update outbox entry with full data for the sync engine
             await db.outbox.where('localId').equals(saleId).modify({
                 data: {
                     ...localSale,
                     items: localItems,
                     payment: {
-                        amount: totals.total,
-                        method: paymentMethod,
-                        accountId: selectedAccountId || undefined
+                        amount: paidAmount,
+                        method: payment.method,
+                        reference: payment.reference,
+                        accountId: payment.accountId || undefined
                     }
                 }
             })
 
-            toast.success('Sale completed successfully!')
+            toast.success(isCreditSale ? 'Credit sale recorded!' : 'Sale completed successfully!')
             setCart([])
             setCustomerId(undefined)
         } catch (error) {
@@ -354,40 +385,6 @@ export default function POSPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button
-                            variant={paymentMethod === 'CASH' ? 'default' : 'outline'}
-                            className="flex items-center gap-2 py-6"
-                            onClick={() => setPaymentMethod('CASH')}
-                        >
-                            <Banknote className="h-4 w-4" />
-                            Cash
-                        </Button>
-                        <Button
-                            variant={paymentMethod === 'MOBILE_MONEY' ? 'default' : 'outline'}
-                            className="flex items-center gap-2 py-6"
-                            onClick={() => setPaymentMethod('MOBILE_MONEY')}
-                        >
-                            <CreditCard className="h-4 w-4" />
-                            Mobile
-                        </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Deposit To</label>
-                        <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Account (e.g. Cash Drawer)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {accounts.map((acc) => (
-                                    <SelectItem key={acc.id} value={acc.id}>
-                                        {acc.name} ({acc.currency})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
 
                     {(!profile?.organizationId && !organization) ? (
                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg text-xs text-amber-700 dark:text-amber-400">
@@ -403,9 +400,9 @@ export default function POSPage() {
                         <Button
                             className="w-full py-6 text-lg font-bold"
                             disabled={cart.length === 0}
-                            onClick={handleCompleteSale}
+                            onClick={() => setIsCheckoutOpen(true)}
                         >
-                            COMPLETE TRANSACTION
+                            Checkout (TZS {totals.total.toLocaleString()})
                         </Button>
                     )}
                 </div>
@@ -415,6 +412,16 @@ export default function POSPage() {
                 open={isScannerOpen}
                 onOpenChange={setIsScannerOpen}
                 onScan={handleScan}
+            />
+
+            <CheckoutModal
+                open={isCheckoutOpen}
+                onOpenChange={setIsCheckoutOpen}
+                totalAmount={totals.total}
+                cartItemCount={cart.length}
+                accounts={accounts}
+                selectedCustomer={selectedCustomer}
+                onComplete={handleCompleteSale}
             />
         </div>
     )

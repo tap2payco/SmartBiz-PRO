@@ -458,6 +458,7 @@ const sales = (0,table/* pgTable */.cJ)('sales', {
     saleNumber: (0,varchar/* varchar */.yf)('sale_number', { length: 50 }).notNull(),
     status: saleStatusEnum('status').notNull().default('COMPLETED'),
     paymentStatus: paymentStatusEnum('payment_status').notNull().default('PENDING'),
+    dueDate: (0,timestamp/* timestamp */.vE)('due_date'),
     subtotal: (0,numeric/* decimal */._)('subtotal', { precision: 15, scale: 2 }).notNull().default('0'),
     taxTotal: (0,numeric/* decimal */._)('tax_total', { precision: 15, scale: 2 }).notNull().default('0'),
     discountTotal: (0,numeric/* decimal */._)('discount_total', { precision: 15, scale: 2 }).notNull().default('0'),
@@ -938,10 +939,53 @@ async function authMiddleware(c, next) {
             return c.json({ error: 'Unauthorized: Invalid token' }, 401);
         }
         // Fetch profile with role and permissions
-        // We use the db directly here instead of Supabase client to ensure we get custom fields matches
-        const profile = await db.query.profiles.findFirst({
+        let profile = await db.query.profiles.findFirst({
             where: (0,conditions.eq)(profiles.userId, user.id),
         });
+        // Auto-create organization + profile for new users
+        if (!profile) {
+            try {
+                const email = user.email || 'user';
+                const emailPrefix = email.split('@')[0];
+                const orgName = `${emailPrefix}'s Business`;
+                const slug = `${emailPrefix.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Math.floor(Math.random() * 10000)}`;
+                const firstName = user.user_metadata?.first_name || emailPrefix;
+                const lastName = user.user_metadata?.last_name || '';
+                const result = await db.transaction(async (tx) => {
+                    const [newOrg] = await tx.insert(organizations).values({
+                        name: orgName,
+                        slug,
+                        industry: 'RETAIL',
+                        country: 'TZ',
+                        currency: 'TZS',
+                        settings: {
+                            taxEnabled: true,
+                            vatRate: 18,
+                            offlineMode: true,
+                            multiLocation: false,
+                            sequentialNumbering: true,
+                            fiscalYearStart: '01-01',
+                        },
+                    }).returning();
+                    const [newProfile] = await tx.insert(profiles).values({
+                        userId: user.id,
+                        organizationId: newOrg.id,
+                        firstName,
+                        lastName,
+                        email,
+                        role: 'OWNER',
+                        permissions: [],
+                    }).returning();
+                    return newProfile;
+                });
+                profile = result;
+                console.log(`Auto-created org + profile for user ${email}`);
+            }
+            catch (autoCreateErr) {
+                console.error('Failed to auto-create org/profile:', autoCreateErr);
+                // Continue without profile — dashboard will show limited data
+            }
+        }
         // Attach to context
         c.set('user', user);
         if (profile) {
@@ -1565,6 +1609,8 @@ auth_app.delete('/users/:id', async (c) => {
 
 // EXTERNAL MODULE: ../../node_modules/drizzle-orm/sql/expressions/select.js
 var expressions_select = __webpack_require__(7581);
+// EXTERNAL MODULE: ../../node_modules/drizzle-orm/sql/sql.js
+var sql = __webpack_require__(3361);
 ;// CONCATENATED MODULE: ./src/routes/stakeholders.ts
 
 
@@ -1603,6 +1649,7 @@ stakeholdersApp.get('/', async (c) => {
 stakeholdersApp.get('/:id', async (c) => {
     const id = c.req.param('id');
     const organizationId = c.get('organizationId');
+    // 1. Get Stakeholder
     const result = await db
         .select()
         .from(stakeholders)
@@ -1611,7 +1658,31 @@ stakeholdersApp.get('/:id', async (c) => {
     if (result.length === 0) {
         return c.json({ error: 'Stakeholder not found' }, 404);
     }
-    return c.json({ stakeholder: result[0] });
+    const stakeholder = result[0];
+    // 2. Calculate Outstanding Debt
+    // Sum of (totalAmount - paidAmount) for all sales that are NOT 'PAID'
+    const salesDebt = await db
+        .select({
+        totalDebt: (0,sql/* sql */.ll) `sum(${sales.totalAmount} - ${sales.paidAmount})`,
+        overdueDebt: (0,sql/* sql */.ll) `sum(CASE WHEN ${sales.dueDate} < NOW() THEN (${sales.totalAmount} - ${sales.paidAmount}) ELSE 0 END)`
+    })
+        .from(sales)
+        .where((0,conditions/* and */.Uo)((0,conditions.eq)(sales.customerId, id), (0,conditions.eq)(sales.organizationId, organizationId), (0,sql/* sql */.ll) `${sales.paymentStatus} != 'PAID'`));
+    const outstandingDebt = parseFloat(salesDebt[0]?.totalDebt || '0');
+    const overdueAmount = parseFloat(salesDebt[0]?.overdueDebt || '0');
+    // 3. Calculate Available Credit
+    let availableCredit = 0;
+    if (stakeholder.creditLimit) {
+        availableCredit = Math.max(0, parseFloat(stakeholder.creditLimit) - outstandingDebt);
+    }
+    return c.json({
+        stakeholder: {
+            ...stakeholder,
+            outstandingDebt,
+            overdueAmount,
+            availableCredit
+        }
+    });
 });
 // POST /stakeholders - Create new
 stakeholdersApp.post('/', (0,cjs/* zValidator */.l)('json', stakeholders_stakeholderSchema), async (c) => {
@@ -1695,8 +1766,6 @@ stakeholdersApp.delete('/:id', async (c) => {
 
 // EXTERNAL MODULE: ../../node_modules/zod/v3/ZodError.js
 var ZodError = __webpack_require__(5765);
-// EXTERNAL MODULE: ../../node_modules/drizzle-orm/sql/sql.js
-var sql = __webpack_require__(3361);
 ;// CONCATENATED MODULE: ./src/routes/items.ts
 
 
@@ -2282,6 +2351,7 @@ stock_movements_app.post('/transfer', async (c) => {
 
 
 
+
 const sales_app = new dist.Hono();
 // Validation Schemas
 const createSaleSchema = types/* object */.Ik({
@@ -2348,6 +2418,40 @@ sales_app.post('/', async (c) => {
         }, 0);
         const totalAmount = subtotal - discountTotal + taxTotal;
         const paidAmount = validated.payment ? validated.payment.amount : 0;
+        // Validation: Credit Sale Logic
+        let dueDate = null;
+        if (paidAmount < totalAmount) {
+            // 1. Customer is required for credit
+            if (!validated.customerId) {
+                return c.json({ error: 'Customer is required for credit sales' }, 400);
+            }
+            // 2. Check Credit Limit
+            const customer = await db.query.stakeholders.findFirst({
+                where: (0,conditions/* and */.Uo)((0,conditions.eq)(stakeholders.id, validated.customerId), (0,conditions.eq)(stakeholders.organizationId, organizationId)),
+            });
+            if (!customer)
+                return c.json({ error: 'Customer not found' }, 404);
+            const creditLimit = customer.creditLimit ? parseFloat(customer.creditLimit) : 0;
+            if (creditLimit > 0) {
+                // Calculate current debt
+                const currentDebtResult = await db
+                    .select({
+                    totalDebt: (0,sql/* sql */.ll) `sum(${sales.totalAmount} - ${sales.paidAmount})`
+                })
+                    .from(sales)
+                    .where((0,conditions/* and */.Uo)((0,conditions.eq)(sales.customerId, validated.customerId), (0,conditions.eq)(sales.organizationId, organizationId), (0,sql/* sql */.ll) `${sales.paymentStatus} != 'PAID'`));
+                const currentDebt = parseFloat(currentDebtResult[0]?.totalDebt || '0');
+                const newDebt = totalAmount - paidAmount;
+                if (currentDebt + newDebt > creditLimit) {
+                    return c.json({ error: `Credit limit exceeded. Available credit: ${creditLimit - currentDebt}` }, 400);
+                }
+            }
+            // 3. Set Due Date
+            const paymentTerms = customer.paymentTerms || 0;
+            const due = new Date();
+            due.setDate(due.getDate() + paymentTerms);
+            dueDate = due;
+        }
         // Transactional insert
         const result = await db.transaction(async (tx) => {
             // 1. Create Sale
@@ -2361,6 +2465,7 @@ sales_app.post('/', async (c) => {
                 totalAmount: String(totalAmount),
                 paidAmount: String(paidAmount),
                 paymentStatus: paidAmount >= totalAmount ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING'),
+                dueDate: dueDate,
                 notes: validated.notes,
                 createdBy: user?.id,
             }).returning();
@@ -2389,6 +2494,7 @@ sales_app.post('/', async (c) => {
                 });
                 // Decrease quantity on hand
                 // Note: items table does not have quantityOnHand. Stock is managed by movements.
+                // We update updatedAt to trigger any syncs
                 await tx.update(items)
                     .set({
                     updatedAt: new Date()
@@ -2476,6 +2582,98 @@ sales_app.get('/:id', async (c) => {
         return c.json({ error: 'Failed to fetch sale' }, 500);
     }
 });
+// POST /sales/:id/payments - Record a payment for a sale (Debt Collection)
+sales_app.post('/:id/payments', async (c) => {
+    try {
+        const organizationId = c.get('organizationId');
+        const user = c.get('user');
+        if (!organizationId)
+            return c.json({ error: 'Unauthorized' }, 401);
+        const saleId = c.req.param('id');
+        const body = await c.req.json();
+        // Validation Schema for Payment
+        const paymentSchema = types/* object */.Ik({
+            amount: types/* number */.ai().positive(),
+            method: types/* enum */.k5(['CASH', 'MOBILE_MONEY', 'CARD', 'BANK_TRANSFER', 'CREDIT']),
+            reference: types/* string */.Yj().optional(),
+            accountId: types/* string */.Yj().uuid().optional(),
+            notes: types/* string */.Yj().optional()
+        });
+        const validated = paymentSchema.parse(body);
+        // Transaction
+        const updatedSale = await db.transaction(async (tx) => {
+            // 1. Get Sale
+            const sale = await tx.query.sales.findFirst({
+                where: (0,conditions/* and */.Uo)((0,conditions.eq)(sales.id, saleId), (0,conditions.eq)(sales.organizationId, organizationId))
+            });
+            if (!sale)
+                throw new Error('Sale not found');
+            const currentPaid = parseFloat(sale.paidAmount);
+            const total = parseFloat(sale.totalAmount);
+            const newAmount = validated.amount;
+            if (currentPaid + newAmount > total) {
+                throw new Error(`Payment exceeds balance. Remaining: ${total - currentPaid}`);
+            }
+            // 2. Create Payment Record
+            await tx.insert(payments).values({
+                organizationId,
+                saleId: sale.id,
+                amount: String(newAmount),
+                method: validated.method,
+                reference: validated.reference,
+                notes: validated.notes,
+                createdBy: user?.id,
+            });
+            // 3. Create Bank Transaction (Deposit)
+            if (validated.accountId) {
+                const [account] = await tx
+                    .select()
+                    .from(bankAccounts)
+                    .where((0,conditions/* and */.Uo)((0,conditions.eq)(bankAccounts.id, validated.accountId), (0,conditions.eq)(bankAccounts.organizationId, organizationId)));
+                if (account) {
+                    await tx.insert(bankTransactions).values({
+                        organizationId,
+                        accountId: validated.accountId,
+                        type: 'DEPOSIT',
+                        amount: String(newAmount),
+                        transactionDate: new Date().toISOString(),
+                        description: `Payment for ${sale.saleNumber}`,
+                        referenceType: 'SALE',
+                        referenceId: sale.id,
+                        createdBy: user?.id || ''
+                    });
+                    await tx
+                        .update(bankAccounts)
+                        .set({
+                        currentBalance: (0,sql/* sql */.ll) `${bankAccounts.currentBalance} + ${newAmount}`,
+                        updatedAt: new Date()
+                    })
+                        .where((0,conditions.eq)(bankAccounts.id, validated.accountId));
+                }
+            }
+            // 4. Update Sale Status
+            const newPaidTotal = currentPaid + newAmount;
+            const [updated] = await tx
+                .update(sales)
+                .set({
+                paidAmount: String(newPaidTotal),
+                paymentStatus: newPaidTotal >= total ? 'PAID' : 'PARTIAL',
+                updatedAt: new Date()
+            })
+                .where((0,conditions.eq)(sales.id, saleId))
+                .returning();
+            return updated;
+        });
+        return c.json(updatedSale);
+    }
+    catch (error) {
+        if (error instanceof ZodError/* ZodError */.G) {
+            return c.json({ error: 'Validation failed', details: error.errors }, 400);
+        }
+        console.error('Error recording payment:', error);
+        return c.json({ error: error.message || 'Failed to record payment' }, 400);
+    }
+});
 /* harmony default export */ const routes_sales = (sales_app);
 
 ;// CONCATENATED MODULE: ./src/routes/reports.ts
@@ -2542,6 +2740,112 @@ reports_app.get('/pnl', async (c) => {
     catch (error) {
         console.error('P&L Report Error:', error);
         return c.json({ error: 'Failed to generate report' }, 500);
+    }
+});
+// GET /reports/dashboard — Dashboard summary stats
+reports_app.get('/dashboard', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId)
+        return c.json({ error: 'Unauthorized' }, 401);
+    try {
+        // Total revenue (all time, completed sales)
+        const [revenueResult] = await db
+            .select({ total: (0,sql/* sql */.ll) `sum(${sales.totalAmount})` })
+            .from(sales)
+            .where((0,conditions/* and */.Uo)((0,conditions.eq)(sales.organizationId, profile.organizationId), (0,conditions.eq)(sales.status, 'COMPLETED')));
+        // Total number of orders
+        const [orderCountResult] = await db
+            .select({ count: (0,sql/* sql */.ll) `count(*)` })
+            .from(sales)
+            .where((0,conditions/* and */.Uo)((0,conditions.eq)(sales.organizationId, profile.organizationId), (0,conditions.eq)(sales.status, 'COMPLETED')));
+        // Today's revenue
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const [todayResult] = await db
+            .select({ total: (0,sql/* sql */.ll) `sum(${sales.totalAmount})` })
+            .from(sales)
+            .where((0,conditions/* and */.Uo)((0,conditions.eq)(sales.organizationId, profile.organizationId), (0,conditions.eq)(sales.status, 'COMPLETED'), (0,conditions/* gte */.RO)(sales.createdAt, todayStart)));
+        return c.json({
+            totalRevenue: parseFloat(revenueResult?.total || '0'),
+            totalOrders: parseInt(orderCountResult?.count || '0'),
+            todayRevenue: parseFloat(todayResult?.total || '0'),
+        });
+    }
+    catch (error) {
+        console.error('Dashboard Report Error:', error);
+        return c.json({ error: 'Failed to generate dashboard report' }, 500);
+    }
+});
+// GET /reports/sales-chart?range=7d|30d|90d — Daily revenue for chart
+reports_app.get('/sales-chart', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId)
+        return c.json({ error: 'Unauthorized' }, 401);
+    const range = c.req.query('range') || '7d';
+    const days = range === '90d' ? 90 : range === '30d' ? 30 : 7;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+    try {
+        const results = await db
+            .select({
+            date: (0,sql/* sql */.ll) `DATE(${sales.createdAt})`,
+            revenue: (0,sql/* sql */.ll) `sum(${sales.totalAmount})`,
+        })
+            .from(sales)
+            .where((0,conditions/* and */.Uo)((0,conditions.eq)(sales.organizationId, profile.organizationId), (0,conditions.eq)(sales.status, 'COMPLETED'), (0,conditions/* gte */.RO)(sales.createdAt, startDate)))
+            .groupBy((0,sql/* sql */.ll) `DATE(${sales.createdAt})`)
+            .orderBy((0,sql/* sql */.ll) `DATE(${sales.createdAt})`);
+        // Fill in days with zero revenue so the chart has no gaps
+        const chartData = [];
+        const revenueMap = new Map(results.map(r => [r.date, parseFloat(r.revenue || '0')]));
+        for (let i = 0; i < days; i++) {
+            const d = new Date(startDate);
+            d.setDate(d.getDate() + i);
+            const dateStr = d.toISOString().split('T')[0];
+            chartData.push({
+                date: dateStr,
+                revenue: revenueMap.get(dateStr) ?? 0,
+            });
+        }
+        return c.json(chartData);
+    }
+    catch (error) {
+        console.error('Sales Chart Error:', error);
+        return c.json({ error: 'Failed to generate sales chart' }, 500);
+    }
+});
+// GET /reports/top-products?limit=5 — Top selling products
+reports_app.get('/top-products', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId)
+        return c.json({ error: 'Unauthorized' }, 401);
+    const limit = parseInt(c.req.query('limit') || '5');
+    try {
+        const results = await db
+            .select({
+            itemId: saleItems.itemId,
+            name: items.name,
+            totalQuantity: (0,sql/* sql */.ll) `sum(${saleItems.quantity})`,
+            totalRevenue: (0,sql/* sql */.ll) `sum(${saleItems.quantity} * ${saleItems.unitPrice})`,
+        })
+            .from(saleItems)
+            .innerJoin(sales, (0,conditions.eq)(saleItems.saleId, sales.id))
+            .innerJoin(items, (0,conditions.eq)(saleItems.itemId, items.id))
+            .where((0,conditions/* and */.Uo)((0,conditions.eq)(sales.organizationId, profile.organizationId), (0,conditions.eq)(sales.status, 'COMPLETED')))
+            .groupBy(saleItems.itemId, items.name)
+            .orderBy((0,expressions_select/* desc */.i)((0,sql/* sql */.ll) `sum(${saleItems.quantity})`))
+            .limit(limit);
+        return c.json(results.map(r => ({
+            itemId: r.itemId,
+            name: r.name,
+            totalQuantity: parseInt(r.totalQuantity || '0'),
+            totalRevenue: parseFloat(r.totalRevenue || '0'),
+        })));
+    }
+    catch (error) {
+        console.error('Top Products Error:', error);
+        return c.json({ error: 'Failed to generate top products report' }, 500);
     }
 });
 /* harmony default export */ const reports = (reports_app);
@@ -3491,13 +3795,14 @@ const src_app = new dist.Hono();
 // 1. CORS MUST be first to handle OPTIONS preflight
 src_app.use('*', (0,cors.cors)({
     origin: (origin) => {
-        // Allow Vercel production, preview and local development
+        // Allow Vercel, Render, and local development
         if (origin === 'https://smart-biz-pro-web.vercel.app' ||
             origin?.endsWith('.vercel.app') ||
+            origin?.endsWith('.onrender.com') ||
             origin?.includes('localhost')) {
             return origin;
         }
-        return 'https://smart-biz-pro-web.vercel.app'; // Default fallback
+        return 'https://smartbiz-pro.onrender.com'; // Default fallback
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
