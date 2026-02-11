@@ -182,6 +182,13 @@ app.use('/transfers', authMiddleware);
 app.use('/transfers/*', authMiddleware);
 app.route('/transfers', transfers);
 
+app.route('/transfers', transfers);
+
+import sync from './routes/sync';
+app.use('/sync', authMiddleware);
+app.use('/sync/*', authMiddleware);
+app.route('/sync', sync);
+
 import { serve } from '@hono/node-server'
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001
