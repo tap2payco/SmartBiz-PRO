@@ -43,4 +43,5 @@ export const db = new Proxy({} as any, {
 
 // Re-export all schema for convenience
 export * from './schema';
+export * from './migrate';
 export type Database = ReturnType<typeof getDb>;

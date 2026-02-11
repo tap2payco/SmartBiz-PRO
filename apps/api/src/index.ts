@@ -172,11 +172,22 @@ import { serve } from '@hono/node-server'
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-    console.log(`Server is running on port ${port}`)
-    serve({
-        fetch: app.fetch,
-        port
-    })
+    // Run migrations before starting
+    import('@smartbiz/db').then(async ({ getDb, runMigrations }) => {
+        try {
+            const db = getDb();
+            await runMigrations(db);
+
+            console.log(`Server is running on port ${port}`)
+            serve({
+                fetch: app.fetch,
+                port
+            })
+        } catch (error) {
+            console.error('Failed to start server due to migration error:', error);
+            process.exit(1);
+        }
+    });
 }
 
 export default app

@@ -46,7 +46,7 @@ export default function SalesHistoryPage() {
 
             if (res.ok) {
                 const data = await res.json()
-                setSales(data)
+                setSales(Array.isArray(data) ? data : [])
             } else {
                 toast.error('Failed to fetch sales history')
             }
