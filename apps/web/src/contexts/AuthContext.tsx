@@ -75,8 +75,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .maybeSingle()
 
             if (error) throw error
-            setProfile(data as Profile)
-        } catch (error) {
+
+            if (data) {
+                const raw = data as any
+                const mappedProfile: Profile = {
+                    id: raw.id,
+                    organizationId: raw.organization_id,
+                    userId: raw.user_id,
+                    firstName: raw.first_name,
+                    lastName: raw.last_name,
+                    phone: raw.phone,
+                    avatar: raw.avatar,
+                    role: raw.role,
+                    permissions: raw.permissions,
+                    isActive: raw.is_active,
+                    createdAt: new Date(raw.created_at),
+                    updatedAt: new Date(raw.updated_at),
+                    createdBy: raw.created_by,
+                    updatedBy: raw.updated_by,
+                    deletedAt: raw.deleted_at ? new Date(raw.deleted_at) : undefined,
+                    version: raw.version || 1
+                }
+                setProfile(mappedProfile)
+            }
             console.error('Error fetching profile:', error)
         } finally {
             setLoading(false)
