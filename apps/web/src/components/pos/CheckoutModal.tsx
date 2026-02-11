@@ -19,8 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Banknote, CreditCard, Wallet, Building2, AlertCircle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Banknote, CreditCard, AlertCircle } from 'lucide-react'
 
 interface Account {
     id: string
