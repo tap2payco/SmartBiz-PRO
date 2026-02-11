@@ -13,8 +13,10 @@ import {
     Clock,
     AlertCircle,
     FileText,
-    DollarSign
+    DollarSign,
+    Plus
 } from 'lucide-react'
+import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -46,9 +48,20 @@ export default function AccountsReceivablePage() {
         setIsLoading(true)
         try {
             const token = await getToken()
-            if (!token) return
+            if (!token) {
+                toast.error('Please log in to view invoices')
+                setIsLoading(false)
+                return
+            }
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sales`, {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL
+            if (!apiUrl) {
+                toast.error('API URL not configured')
+                setIsLoading(false)
+                return
+            }
+
+            const res = await fetch(`${apiUrl}/sales`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
 
@@ -58,11 +71,13 @@ export default function AccountsReceivablePage() {
                 const unpaid = data.filter((s: any) => s.paymentStatus !== 'PAID')
                 setSales(unpaid)
             } else {
-                toast.error('Failed to fetch invoices')
+                const errText = await res.text().catch(() => 'Unknown error')
+                console.error('Fetch invoices failed:', res.status, errText)
+                toast.error(`Failed to fetch invoices (${res.status})`)
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Fetch sales error:', error)
-            toast.error('An error occurred while loading invoices')
+            toast.error(error?.message || 'Network error loading invoices')
         } finally {
             setIsLoading(false)
         }
@@ -96,6 +111,12 @@ export default function AccountsReceivablePage() {
                     <p className="text-gray-500 dark:text-gray-400">Manage outstanding invoices and collect payments.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Link href="/dashboard/sales/invoices/new">
+                        <Button>
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Invoice
+                        </Button>
+                    </Link>
                     <Button variant="outline" size="sm" onClick={fetchSales} disabled={isLoading}>
                         <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                         Refresh

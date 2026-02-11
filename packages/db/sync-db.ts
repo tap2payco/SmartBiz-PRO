@@ -128,11 +128,17 @@ async function main() {
                 "discount_total" numeric(15, 2) DEFAULT '0' NOT NULL,
                 "total_amount" numeric(15, 2) DEFAULT '0' NOT NULL,
                 "paid_amount" numeric(15, 2) DEFAULT '0' NOT NULL,
+                "due_date" timestamp,
                 "notes" text,
                 "created_by" uuid,
                 "created_at" timestamp DEFAULT now() NOT NULL,
                 "updated_at" timestamp DEFAULT now() NOT NULL
             );
+        `);
+
+        // Add due_date column for existing deployments
+        await db.execute(sql`
+            ALTER TABLE "sales" ADD COLUMN IF NOT EXISTS "due_date" timestamp;
         `);
 
         await db.execute(sql`

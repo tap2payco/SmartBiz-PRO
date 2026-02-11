@@ -326,6 +326,34 @@ export default function POSPage() {
                     <Badge variant="secondary">{cart.length} items</Badge>
                 </div>
 
+                {/* Customer Selector */}
+                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                    <Select value={customerId || 'walk-in'} onValueChange={(val) => setCustomerId(val === 'walk-in' ? undefined : val)}>
+                        <SelectTrigger className="h-9 text-sm">
+                            <div className="flex items-center gap-2">
+                                <User className="h-3.5 w-3.5 text-gray-400" />
+                                <SelectValue placeholder="Walk-in Customer" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="walk-in">Walk-in Customer</SelectItem>
+                            {customers?.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                    {c.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {selectedCustomer && selectedCustomer.creditLimit && (
+                        <div className="mt-1 text-xs text-gray-500 flex justify-between">
+                            <span>Credit: TZS {Number(selectedCustomer.creditLimit).toLocaleString()}</span>
+                            <span className={selectedCustomer.availableCredit > 0 ? 'text-green-600' : 'text-red-500'}>
+                                Avail: TZS {(selectedCustomer.availableCredit ?? 0).toLocaleString()}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
                 {/* Cart Items */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {cart.length === 0 ? (
