@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { processOutbox } from '../db/sync'
+import { processOutbox } from '@/lib/db/sync'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
