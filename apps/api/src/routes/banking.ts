@@ -132,6 +132,18 @@ app.post('/transfer', zValidator('json', transferSchema), async (c) => {
 
     const data = c.req.valid('json');
 
+    // Verify accounts belong to organization
+    const [sourceAccount] = await db.select().from(bankAccounts).where(and(eq(bankAccounts.id, data.fromAccountId), eq(bankAccounts.organizationId, profile.organizationId)));
+    const [targetAccount] = await db.select().from(bankAccounts).where(and(eq(bankAccounts.id, data.toAccountId), eq(bankAccounts.organizationId, profile.organizationId)));
+
+    if (!sourceAccount || !targetAccount) {
+        return c.json({ error: 'Invalid account(s)' }, 400);
+    }
+
+
+
+
+
     try {
         await db.transaction(async (tx: any) => {
             // 1. Get Source Account

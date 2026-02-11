@@ -145,6 +145,15 @@ app.post('/', zValidator('json', createExpenseSchema), async (c) => {
 
     const data = c.req.valid('json');
 
+    // Verify category if provided
+    if (data.categoryId) {
+        const category = await db.query.expenseCategories.findFirst({
+            where: and(eq(expenseCategories.id, data.categoryId), eq(expenseCategories.organizationId, profile.organizationId))
+        });
+        if (!category && data.categoryId) return c.json({ error: 'Category not found' }, 404);
+    }
+
+
     try {
         const [expense] = await db.insert(expenses).values({
             organizationId: profile.organizationId,

@@ -100,6 +100,15 @@ app.post('/', async (c) => {
         const count = await db.$count(stockTransfers, eq(stockTransfers.organizationId, organizationId))
         const transferNumber = `TRF-${1001 + count}`
 
+
+        // Verify locations belong to organization
+        const [sourceLocation] = await db.select().from(locations).where(and(eq(locations.id, validated.sourceLocationId), eq(locations.organizationId, organizationId)));
+        const [destinationLocation] = await db.select().from(locations).where(and(eq(locations.id, validated.destinationLocationId), eq(locations.organizationId, organizationId)));
+
+        if (!sourceLocation || !destinationLocation) {
+            return c.json({ error: 'Invalid location(s)' }, 400);
+        }
+
         await db.transaction(async (tx) => {
             // Create Header
             const [transfer] = await tx.insert(stockTransfers).values({

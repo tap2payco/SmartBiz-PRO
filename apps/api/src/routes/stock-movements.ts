@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db } from '@smartbiz/db'
-import { stockMovements, items } from '@smartbiz/db/src/schema/inventory'
+import { stockMovements, items, locations } from '@smartbiz/db/src/schema/inventory'
 import { eq, and, desc } from 'drizzle-orm'
 
 const app = new Hono<{ Variables: { user: any, organizationId: string } }>()
@@ -122,6 +122,15 @@ app.post('/transfer', async (c) => {
 
         if (validated.fromLocationId === validated.toLocationId) {
             return c.json({ error: 'Cannot transfer to the same location' }, 400)
+        }
+
+
+        // Verify locations belong to organization
+        const [fromLocation] = await db.select().from(locations).where(and(eq(locations.id, validated.fromLocationId), eq(locations.organizationId, organizationId)));
+        const [toLocation] = await db.select().from(locations).where(and(eq(locations.id, validated.toLocationId), eq(locations.organizationId, organizationId)));
+
+        if (!fromLocation || !toLocation) {
+            return c.json({ error: 'Invalid location(s)' }, 400);
         }
 
         // Transactionally create movements

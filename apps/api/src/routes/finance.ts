@@ -109,7 +109,17 @@ app.post('/bills', zValidator('json', createBillSchema), async (c) => {
     const profile = c.get('profile');
     if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
 
+
     const data = c.req.valid('json');
+
+    // Verify PO belongs to organization if provided
+    if (data.purchaseOrderId) {
+        const po = await db.query.purchaseOrders.findFirst({
+            where: and(eq(purchaseOrders.id, data.purchaseOrderId), eq(purchaseOrders.organizationId, profile.organizationId))
+        });
+        if (!po) return c.json({ error: 'Purchase Order not found' }, 404);
+    }
+
 
     try {
         const [newBill] = await db.insert(supplierInvoices).values({
