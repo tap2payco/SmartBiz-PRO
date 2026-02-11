@@ -183,7 +183,7 @@ export default function FinancialReportsPage() {
                                 <CardDescription>Visual breakdown of income and costs</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                     <BarChart
                                         data={[
                                             { name: 'Revenue', value: data.revenue, color: '#16a34a' },

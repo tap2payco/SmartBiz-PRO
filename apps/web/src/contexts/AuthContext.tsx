@@ -97,8 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     version: raw.version || 1
                 }
                 setProfile(mappedProfile)
+            } else {
+                console.warn('No profile found for user:', userId)
             }
-            console.error('Error fetching profile:', error)
+        } catch (error) {
+            console.error('Error fetching profile:', JSON.stringify(error, null, 2))
         } finally {
             setLoading(false)
         }

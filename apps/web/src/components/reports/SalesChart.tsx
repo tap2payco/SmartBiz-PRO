@@ -65,7 +65,7 @@ export function SalesChart() {
                             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                         </div>
                     ) : (data && data.length > 0) ? (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                             <BarChart data={data}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
                                 <XAxis
