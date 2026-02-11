@@ -87,29 +87,33 @@ app.get('/low-stock', async (c) => {
             return c.json({ error: 'Unauthorized' }, 401)
         }
 
-        // Get items where reorder_point > 0 (items that have reorder tracking enabled)
-        // For now, we'll flag all items with reorder_point set as potentially low stock
-        // In a full implementation, we'd join with stock_movements to get actual stock levels
         const lowStockItems = await db
-            .select()
+            .select({
+                id: items.id,
+                name: items.name,
+                sku: items.sku,
+                reorderPoint: items.reorderPoint,
+                currentStock: sql<string>`COALESCE(sum(${stockMovements.quantity}), 0)`,
+            })
             .from(items)
+            .leftJoin(stockMovements, eq(stockMovements.itemId, items.id))
             .where(and(
                 eq(items.organizationId, organizationId),
                 eq(items.isActive, true),
                 sql`${items.reorderPoint} > 0`
             ))
+            .groupBy(items.id, items.name, items.sku, items.reorderPoint)
+            .having(sql`COALESCE(sum(${stockMovements.quantity}), 0) <= ${items.reorderPoint}`);
 
-        // For MVP: Return items with reorder point set
-        // TODO: Calculate actual stock levels from stock_movements
-        const itemsWithStockInfo = lowStockItems.map((item: any) => ({
+        const formattedItems = lowStockItems.map(item => ({
             ...item,
-            currentStock: 0, // Placeholder - would be calculated from stock_movements
-            isLowStock: true // Since reorder_point > 0 and stock tracking isn't fully implemented
-        }))
+            currentStock: Number(item.currentStock),
+            isLowStock: true
+        }));
 
         return c.json({
-            count: itemsWithStockInfo.length,
-            items: itemsWithStockInfo
+            count: formattedItems.length,
+            items: formattedItems
         })
     } catch (error) {
         console.error('Error fetching low stock items:', error)

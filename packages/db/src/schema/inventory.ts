@@ -127,6 +127,70 @@ export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
     })
 }))
 
+export const stockTransferStatusEnum = pgEnum('stock_transfer_status', [
+    'DRAFT',      // Created but not yet sent
+    'IN_TRANSIT', // Stock deducted from source, on its way
+    'COMPLETED',  // Stock added to destination
+    'CANCELLED'   // Cancelled before being sent
+])
+
+// Stock Transfers Table (Head)
+export const stockTransfers = pgTable('stock_transfers', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    transferNumber: varchar('transfer_number', { length: 50 }).notNull(), // e.g., TRF-1001
+    sourceLocationId: uuid('source_location_id').notNull().references(() => locations.id),
+    destinationLocationId: uuid('destination_location_id').notNull().references(() => locations.id),
+    status: stockTransferStatusEnum('status').notNull().default('DRAFT'),
+    sentAt: timestamp('sent_at'),
+    receivedAt: timestamp('received_at'),
+    notes: text('notes'),
+    driverName: varchar('driver_name', { length: 100 }),
+    vehicleNumber: varchar('vehicle_number', { length: 50 }),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow()
+})
+
+// Stock Transfer Items (Lines)
+export const stockTransferItems = pgTable('stock_transfer_items', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    transferId: uuid('transfer_id').notNull().references(() => stockTransfers.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id').notNull().references(() => items.id),
+    quantitySent: integer('quantity_sent').notNull(),
+    quantityReceived: integer('quantity_received'), // Null until received
+    notes: text('notes')
+})
+
+export const stockTransfersRelations = relations(stockTransfers, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [stockTransfers.organizationId],
+        references: [organizations.id]
+    }),
+    sourceLocation: one(locations, {
+        fields: [stockTransfers.sourceLocationId],
+        references: [locations.id],
+        relationName: 'sourceLocation'
+    }),
+    destinationLocation: one(locations, {
+        fields: [stockTransfers.destinationLocationId],
+        references: [locations.id],
+        relationName: 'destinationLocation'
+    }),
+    items: many(stockTransferItems)
+}))
+
+export const stockTransferItemsRelations = relations(stockTransferItems, ({ one }) => ({
+    transfer: one(stockTransfers, {
+        fields: [stockTransferItems.transferId],
+        references: [stockTransfers.id]
+    }),
+    item: one(items, {
+        fields: [stockTransferItems.itemId],
+        references: [items.id]
+    })
+}))
+
 // TypeScript Types
 export type ItemCategory = typeof itemCategories.$inferSelect
 export type NewItemCategory = typeof itemCategories.$inferInsert
@@ -139,3 +203,9 @@ export type NewLocation = typeof locations.$inferInsert
 
 export type StockMovement = typeof stockMovements.$inferSelect
 export type NewStockMovement = typeof stockMovements.$inferInsert
+
+export type StockTransfer = typeof stockTransfers.$inferSelect
+export type NewStockTransfer = typeof stockTransfers.$inferInsert
+
+export type StockTransferItem = typeof stockTransferItems.$inferSelect
+export type NewStockTransferItem = typeof stockTransferItems.$inferInsert

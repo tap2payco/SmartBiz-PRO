@@ -170,6 +170,94 @@ async function main() {
             );
         `);
 
+        // ── Returns & Quotations Enums ──
+        console.log('Checking returns & quotations enums...');
+        await db.execute(sql`DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'return_status') THEN
+                CREATE TYPE "public"."return_status" AS ENUM('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED');
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'return_condition') THEN
+                CREATE TYPE "public"."return_condition" AS ENUM('GOOD', 'DAMAGED', 'EXPIRED', 'OTHER');
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'refund_status') THEN
+                CREATE TYPE "public"."refund_status" AS ENUM('PENDING', 'PARTIAL', 'REFUNDED', 'CREDITED');
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'quotation_status') THEN
+                CREATE TYPE "public"."quotation_status" AS ENUM('DRAFT', 'SENT', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'CONVERTED');
+            END IF;
+        END $$;`);
+
+        // ── Returns Tables ──
+        console.log('Checking returns tables...');
+        await db.execute(sql`
+            CREATE TABLE IF NOT EXISTS "returns" (
+                "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+                "organization_id" uuid NOT NULL REFERENCES "organizations"("id") ON DELETE cascade,
+                "sale_id" uuid NOT NULL REFERENCES "sales"("id"),
+                "customer_id" uuid REFERENCES "stakeholders"("id"),
+                "return_number" varchar(50) NOT NULL,
+                "status" "return_status" DEFAULT 'PENDING' NOT NULL,
+                "refund_status" "refund_status" DEFAULT 'PENDING' NOT NULL,
+                "total_amount" numeric(15, 2) DEFAULT '0' NOT NULL,
+                "refunded_amount" numeric(15, 2) DEFAULT '0' NOT NULL,
+                "reason" text,
+                "notes" text,
+                "created_by" uuid,
+                "created_at" timestamp DEFAULT now() NOT NULL,
+                "updated_at" timestamp DEFAULT now() NOT NULL
+            );
+        `);
+
+        await db.execute(sql`
+            CREATE TABLE IF NOT EXISTS "return_items" (
+                "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+                "return_id" uuid NOT NULL REFERENCES "returns"("id") ON DELETE cascade,
+                "item_id" uuid REFERENCES "items"("id"),
+                "quantity" numeric(10, 2) NOT NULL,
+                "unit_price" numeric(15, 2) NOT NULL,
+                "total" numeric(15, 2) NOT NULL,
+                "condition" "return_condition" DEFAULT 'GOOD' NOT NULL,
+                "restock" boolean DEFAULT true NOT NULL,
+                "reason" text
+            );
+        `);
+
+        // ── Quotations Tables ──
+        console.log('Checking quotations tables...');
+        await db.execute(sql`
+            CREATE TABLE IF NOT EXISTS "quotations" (
+                "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+                "organization_id" uuid NOT NULL REFERENCES "organizations"("id") ON DELETE cascade,
+                "customer_id" uuid REFERENCES "stakeholders"("id"),
+                "quotation_number" varchar(50) NOT NULL,
+                "status" "quotation_status" DEFAULT 'DRAFT' NOT NULL,
+                "valid_until" timestamp,
+                "subtotal" numeric(15, 2) DEFAULT '0' NOT NULL,
+                "tax_total" numeric(15, 2) DEFAULT '0' NOT NULL,
+                "total_amount" numeric(15, 2) DEFAULT '0' NOT NULL,
+                "notes" text,
+                "terms" text,
+                "created_by" uuid,
+                "converted_sale_id" uuid REFERENCES "sales"("id"),
+                "created_at" timestamp DEFAULT now() NOT NULL,
+                "updated_at" timestamp DEFAULT now() NOT NULL
+            );
+        `);
+
+        await db.execute(sql`
+            CREATE TABLE IF NOT EXISTS "quotation_items" (
+                "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+                "quotation_id" uuid NOT NULL REFERENCES "quotations"("id") ON DELETE cascade,
+                "item_id" uuid REFERENCES "items"("id"),
+                "quantity" numeric(10, 2) NOT NULL,
+                "unit_price" numeric(15, 2) NOT NULL,
+                "tax_rate" numeric(5, 2) DEFAULT '0',
+                "tax_amount" numeric(15, 2) DEFAULT '0',
+                "total" numeric(15, 2) NOT NULL,
+                "notes" text
+            );
+        `);
+
         // Add constraints separately to avoid errors if they already exist
         console.log('Adding constraints...');
         await db.execute(sql`DO $$ BEGIN

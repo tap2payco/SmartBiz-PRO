@@ -154,8 +154,8 @@ export default function DashboardPage() {
                     color="bg-yellow-500"
                 />
                 <StatCard
-                    title="Pending Orders"
-                    value="0"
+                    title="Open POs"
+                    value={(organization?.stats?.pendingOrders || 0).toString()}
                     icon={ShoppingCart}
                     color="bg-purple-500"
                 />

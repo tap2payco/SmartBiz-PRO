@@ -177,6 +177,11 @@ app.use('/quotations', authMiddleware);
 app.use('/quotations/*', authMiddleware);
 app.route('/quotations', quotations);
 
+import transfers from './routes/transfers';
+app.use('/transfers', authMiddleware);
+app.use('/transfers/*', authMiddleware);
+app.route('/transfers', transfers);
+
 import { serve } from '@hono/node-server'
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001

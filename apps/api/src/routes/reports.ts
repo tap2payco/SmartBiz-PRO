@@ -4,9 +4,11 @@ import {
     sales,
     saleItems,
     expenses,
-    items
+    items,
+    stockMovements,
+    purchaseOrders
 } from '@smartbiz/db';
-import { eq, and, sql, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, desc, or } from 'drizzle-orm';
 import { User } from '@supabase/supabase-js';
 import { Profile } from '@smartbiz/shared';
 
@@ -136,10 +138,23 @@ app.get('/dashboard', async (c) => {
                 gte(sales.createdAt, todayStart)
             ));
 
+        // Pending Purchase Orders
+        const [pendingOrdersResult] = await db
+            .select({ count: sql<string>`count(*)` })
+            .from(purchaseOrders)
+            .where(and(
+                eq(purchaseOrders.organizationId, profile.organizationId),
+                or(
+                    eq(purchaseOrders.status, 'ISSUED'),
+                    eq(purchaseOrders.status, 'PARTIAL_RECEIVED')
+                )
+            ));
+
         return c.json({
             totalRevenue: parseFloat(revenueResult?.total || '0'),
             totalOrders: parseInt(orderCountResult?.count || '0'),
             todayRevenue: parseFloat(todayResult?.total || '0'),
+            pendingOrders: parseInt(pendingOrdersResult?.count || '0'),
         });
     } catch (error) {
         console.error('Dashboard Report Error:', error);
@@ -230,6 +245,64 @@ app.get('/top-products', async (c) => {
     } catch (error) {
         console.error('Top Products Error:', error);
         return c.json({ error: 'Failed to generate top products report' }, 500);
+    }
+});
+
+// GET /reports/inventory-valuation — Stock levels and valuation
+app.get('/inventory-valuation', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
+
+    try {
+        // Get all active items with their stock levels from stock_movements
+        const results = await db
+            .select({
+                id: items.id,
+                name: items.name,
+                sku: items.sku,
+                costPrice: items.costPrice,
+                sellingPrice: items.sellingPrice,
+                reorderPoint: items.reorderPoint,
+                stockLevel: sql<string>`COALESCE(sum(${stockMovements.quantity}), 0)`,
+            })
+            .from(items)
+            .leftJoin(stockMovements, eq(stockMovements.itemId, items.id))
+            .where(and(
+                eq(items.organizationId, profile.organizationId),
+                eq(items.isActive, true)
+            ))
+            .groupBy(items.id, items.name, items.sku, items.costPrice, items.sellingPrice, items.reorderPoint)
+            .orderBy(desc(sql`COALESCE(sum(${stockMovements.quantity}), 0)`));
+
+        const valuation = results.map(r => {
+            const stock = parseInt(r.stockLevel || '0');
+            const cost = parseFloat(r.costPrice?.toString() || '0');
+            return {
+                id: r.id,
+                name: r.name,
+                sku: r.sku,
+                costPrice: cost,
+                sellingPrice: parseFloat(r.sellingPrice?.toString() || '0'),
+                stockLevel: stock,
+                reorderPoint: r.reorderPoint || 0,
+                stockValue: stock * cost,
+            };
+        });
+
+        const totalValue = valuation.reduce((sum, v) => sum + v.stockValue, 0);
+        const lowStockCount = valuation.filter(v => v.reorderPoint > 0 && v.stockLevel <= v.reorderPoint).length;
+
+        return c.json({
+            items: valuation,
+            summary: {
+                totalValue,
+                totalItems: valuation.length,
+                lowStockCount,
+            }
+        });
+    } catch (error) {
+        console.error('Inventory Valuation Error:', error);
+        return c.json({ error: 'Failed to generate inventory valuation' }, 500);
     }
 });
 
