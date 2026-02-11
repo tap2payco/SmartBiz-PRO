@@ -47,7 +47,8 @@ export function CustomerSelect({ value, onSelect, error }: CustomerSelectProps) 
             })
             if (res.ok) {
                 const data = await res.json()
-                setCustomers(data)
+                const customersArray = Array.isArray(data) ? data : []
+                setCustomers(customersArray)
             }
         } catch (error) {
             console.error('Failed to fetch customers', error)

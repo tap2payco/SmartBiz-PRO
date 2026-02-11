@@ -68,7 +68,8 @@ export default function AccountsReceivablePage() {
             if (res.ok) {
                 const data = await res.json()
                 // Filter only sales with outstanding balance
-                const unpaid = data.filter((s: any) => s.paymentStatus !== 'PAID')
+                const salesArray = Array.isArray(data) ? data : []
+                const unpaid = salesArray.filter((s: any) => s.paymentStatus !== 'PAID')
                 setSales(unpaid)
             } else {
                 const errText = await res.text().catch(() => 'Unknown error')

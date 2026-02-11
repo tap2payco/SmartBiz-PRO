@@ -58,7 +58,7 @@ export function CheckoutModal({
     totalAmount,
     cartItemCount,
     onComplete,
-    accounts,
+    accounts = [],
     selectedCustomer
 }: CheckoutModalProps) {
     const [step, setStep] = useState<'REVIEW' | 'PAYMENT'>('PAYMENT')

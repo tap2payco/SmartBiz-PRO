@@ -78,9 +78,10 @@ export default function POSPage() {
                 })
                 if (accRes.ok) {
                     const data = await accRes.json()
-                    setAccounts(data)
+                    const accArray = Array.isArray(data) ? data : []
+                    setAccounts(accArray)
                     // Default to first 'CASH' account if available
-                    const defaultCash = data.find((a: any) => a.type === 'CASH')
+                    const defaultCash = accArray.find((a: any) => a.type === 'CASH')
                     if (defaultCash) setSelectedAccountId(defaultCash.id)
                 }
 
