@@ -12,7 +12,8 @@ import {
     CheckCircle2,
     Clock,
     AlertCircle,
-    FileText
+    FileText,
+    Plus
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { SaleDetailsModal } from '@/components/sales/SaleDetailsModal'
+import { TransactionDialog } from '@/components/shared/TransactionDialog'
 
 export default function SalesHistoryPage() {
     const { user, getToken } = useAuth()
@@ -28,6 +30,7 @@ export default function SalesHistoryPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedSale, setSelectedSale] = useState<any>(null)
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+    const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
 
     // Stats
     const totalSalesAmount = sales.reduce((acc, sale) => acc + Number(sale.totalAmount || 0), 0)
@@ -80,6 +83,10 @@ export default function SalesHistoryPage() {
                     <p className="text-gray-500 dark:text-gray-400">View and manage all transactions.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button onClick={() => setIsInvoiceDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Invoice
+                    </Button>
                     <Button variant="outline" size="sm" onClick={fetchSales} disabled={isLoading}>
                         <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -216,6 +223,15 @@ export default function SalesHistoryPage() {
                     sale={selectedSale}
                 />
             )}
+
+            <TransactionDialog
+                type="INVOICE"
+                open={isInvoiceDialogOpen}
+                onOpenChange={(open) => {
+                    setIsInvoiceDialogOpen(open)
+                    if (!open) fetchSales() // Refresh after close to show new invoice
+                }}
+            />
         </div>
     )
 }

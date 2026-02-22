@@ -1,0 +1,23 @@
+﻿src/app/dashboard/sales/page.tsx(86,26): error TS2304: Cannot find name 'Plus'.
+src/app/dashboard/settings/page.tsx(56,9): error TS2322: Type 'Resolver<{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled?: boolean | undefined; vatRate?: number | undefined; fiscalYearStart?: string | undefined; }, any, { ...; }>' is not assignable to type 'Resolver<{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled: boolean; vatRate: number; fiscalYearStart: string; }, any, { ...; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled: boolean; vatRate: number; fiscalYearStart: string; }>' is not assignable to type 'ResolverOptions<{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled?: boolean | undefined; vatRate?: number | undefined; fiscalYearStart?: string | undefined; }>'.
+      Type 'boolean | undefined' is not assignable to type 'boolean'.
+        Type 'undefined' is not assignable to type 'boolean'.
+src/app/dashboard/settings/page.tsx(158,22): error TS2304: Cannot find name 'AlertCircle'.
+src/app/dashboard/settings/page.tsx(177,50): error TS2345: Argument of type '(data: SettingsFormData) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled: boolean; vatRate: number; fiscalYearStart: string; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled: boolean; vatRate: number; fiscalYearStart: string; }': name, industry, country, currency, and 3 more.
+src/app/dashboard/settings/page.tsx(283,50): error TS2345: Argument of type '(data: SettingsFormData) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled: boolean; vatRate: number; fiscalYearStart: string; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; industry: "RETAIL" | "WHOLESALE" | "HEALTHCARE" | "EDUCATION" | "NGO" | "MANUFACTURING"; country: string; currency: string; taxEnabled: boolean; vatRate: number; fiscalYearStart: string; }': name, industry, country, currency, and 3 more.
+src/components/layout/Sidebar.tsx(38,60): error TS2304: Cannot find name 'Briefcase'.
+src/components/shared/QRScanner.tsx(49,28): error TS2322: Type 'RefObject<HTMLVideoElement | null>' is not assignable to type 'LegacyRef<HTMLVideoElement> | undefined'.
+  Type 'RefObject<HTMLVideoElement | null>' is not assignable to type 'RefObject<HTMLVideoElement>'.
+    Type 'HTMLVideoElement | null' is not assignable to type 'HTMLVideoElement'.
+      Type 'null' is not assignable to type 'HTMLVideoElement'.
+src/components/shared/TransactionDialog.tsx(71,34): error TS2551: Property 'organization' does not exist on type 'Profile'. Did you mean 'organizationId'?
+src/components/shared/TransactionDialog.tsx(134,39): error TS2551: Property 'organization' does not exist on type 'Profile'. Did you mean 'organizationId'?
+src/components/shared/TransactionDialog.tsx(279,84): error TS2551: Property 'organization' does not exist on type 'Profile'. Did you mean 'organizationId'?

@@ -78,30 +78,104 @@ export function SaleDetailsModal({ isOpen, onClose, sale }: SaleDetailsModalProp
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                                // ... print logic ...
+                            onClick={async () => {
+                                const QRCode = (await import('qrcode')).default
+                                const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify({
+                                    type: 'SMARTBIZ_SALE',
+                                    id: sale.id,
+                                    number: sale.saleNumber,
+                                    total: sale.totalAmount
+                                }))
+
                                 const printWindow = window.open('', '_blank')
-                                // ... (abbreviated for brevity in tool call, will use existing code) ...
                                 if (printWindow) {
-                                    // ... existing print logic ...
                                     printWindow.document.write(`
                                         <!DOCTYPE html>
                                         <html>
                                         <head>
                                             <title>Invoice - ${sale.saleNumber}</title>
                                             <style>
-                                                /* ... styles ... */
                                                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                                                body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-                                                /* ... reset ... */
+                                                body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 40px; color: #1a1a1a; }
+                                                .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; }
+                                                .qr-section { text-align: right; }
+                                                .qr-code { width: 100px; height: 100px; margin-bottom: 5px; }
+                                                .qr-label { font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+                                                .bill-to { margin-bottom: 30px; }
+                                                .items-table { w-full border-collapse: collapse; margin-bottom: 30px; }
+                                                .items-table th { background: #f9fafb; padding: 12px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+                                                .items-table td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+                                                .totals { margin-left: auto; width: 250px; }
+                                                .total-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+                                                .grand-total { font-size: 18px; font-weight: 700; color: #2563eb; border-top: 2px solid #e5e7eb; margin-top: 10px; padding-top: 10px; }
                                             </style>
                                         </head>
                                         <body>
-                                            <h1>Invoice ${sale.saleNumber}</h1>
-                                            <!-- ... -->
+                                            <div class="header">
+                                                <div>
+                                                    <h1 style="font-size: 24px; color: #2563eb; margin-bottom: 5px;">SmartBiz PRO</h1>
+                                                    <p style="color: #6b7280; font-size: 14px;">Official Receipt / Invoice</p>
+                                                    <p style="font-weight: 600; font-size: 16px; margin-top: 15px;"># ${sale.saleNumber}</p>
+                                                    <p style="font-size: 12px; color: #9ca3af;">${format(new Date(sale.createdAt), 'MMMM dd, yyyy HH:mm')}</p>
+                                                </div>
+                                                <div class="qr-section">
+                                                    <img src="${qrCodeDataUrl}" class="qr-code" />
+                                                    <div class="qr-label">Scan to Verify</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="bill-to">
+                                                <h3 style="font-size: 10px; color: #9ca3af; text-transform: uppercase; margin-bottom: 10px;">Bill To:</h3>
+                                                <p style="font-weight: 600;">${sale.customer?.name || 'Walk-in Customer'}</p>
+                                                ${sale.customer?.phone ? `<p style="font-size: 14px; color: #4b5563;">${sale.customer.phone}</p>` : ''}
+                                            </div>
+
+                                            <table class="items-table" style="width: 100%; border-collapse: collapse;">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Description</th>
+                                                        <th style="text-align: right;">Unit Price</th>
+                                                        <th style="text-align: center;">Qty</th>
+                                                        <th style="text-align: right;">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${sale.items?.map((item: any) => `
+                                                        <tr>
+                                                            <td style="font-weight: 500;">${item.item?.name || 'Item'}</td>
+                                                            <td style="text-align: right;">${Number(item.unitPrice).toLocaleString()}</td>
+                                                            <td style="text-align: center;">${Number(item.quantity)}</td>
+                                                            <td style="text-align: right; font-weight: 600;">${Number(item.total).toLocaleString()}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+
+                                            <div class="totals">
+                                                <div class="total-row">
+                                                    <span>Subtotal</span>
+                                                    <span>${Number(sale.subtotal).toLocaleString()}</span>
+                                                </div>
+                                                ${Number(sale.taxTotal) > 0 ? `
+                                                    <div class="total-row">
+                                                        <span>Tax</span>
+                                                        <span>${Number(sale.taxTotal).toLocaleString()}</span>
+                                                    </div>
+                                                ` : ''}
+                                                <div class="total-row grand-total">
+                                                    <span>Amount Due</span>
+                                                    <span>TZS ${Number(sale.totalAmount).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+
+                                            <div style="margin-top: 60px; text-align: center; border-top: 1px solid #f0f0f0; padding-top: 20px;">
+                                                <p style="font-size: 14px; font-weight: 600; color: #4b5563;">Thank you for your business!</p>
+                                                <p style="font-size: 10px; color: #9ca3af; margin-top: 5px;">Powered by SmartBiz Software</p>
+                                            </div>
                                         </body>
                                         </html>
                                     `)
+                                    printWindow.document.close()
                                     printWindow.print()
                                 }
                             }}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
+import 'scanner_screen.dart';
 
 class QuoteEditScreen extends StatefulWidget {
   final Map<String, dynamic>? quote;
@@ -74,10 +75,20 @@ class _QuoteEditScreenState extends State<QuoteEditScreen> {
               trailing: Text(NumberFormat.simpleCurrency(name: 'KES').format(item['total_price'])),
               onLongPress: () => setState(() => _lineItems.remove(item)),
             )),
-            TextButton.icon(
-              onPressed: _addItem,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Item'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton.icon(
+                  onPressed: _addItem,
+                  icon: const Icon(Icons.list),
+                  label: const Text('Add from List'),
+                ),
+                TextButton.icon(
+                  onPressed: _scanItem,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Scan Item'),
+                ),
+              ],
             ),
             const Divider(),
             _buildSummaryRow('Total Estimate', _total, isBold: true),
@@ -101,6 +112,41 @@ class _QuoteEditScreenState extends State<QuoteEditScreen> {
         ],
       ),
     );
+  }
+
+  void _scanItem() async {
+    final code = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScannerScreen()),
+    );
+    
+    if (code != null && mounted) {
+      final db = context.read<DatabaseService>();
+      final items = await db.getItems();
+      final item = items.firstWhere(
+        (i) => i['sku'] == code,
+        orElse: () => items.firstWhere(
+          (i) => i['name'].toString().toLowerCase().contains(code.toLowerCase()),
+          orElse: () => {},
+        ),
+      );
+
+      if (item.isNotEmpty) {
+        setState(() {
+          _lineItems.add({
+            'id': item['id'],
+            'name': item['name'],
+            'item_id': item['id'],
+            'quantity': 1,
+            'unit_price': item['selling_price'] as double,
+            'total_price': item['selling_price'] as double,
+          });
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added ${item['name']}')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item not found')));
+      }
+    }
   }
 
   void _addItem() async {

@@ -14,16 +14,31 @@ import {
     Plus,
     Box,
     UserPlus,
-    FileText
+    FileText,
+    Receipt,
+    FileCheck,
+    CreditCard,
+    ClipboardList,
+    Scan
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LowStockAlert } from '@/components/inventory/LowStockAlert'
 import { SalesChart } from '@/components/reports/SalesChart'
 import { TopProducts } from '@/components/reports/TopProducts'
+import { QuickActionDialogs } from '@/components/dashboard/QuickActionDialogs'
+import { CustomerDialog } from '@/components/customers/CustomerDialog'
 
 export default function DashboardPage() {
     const { user, profile, getToken } = useAuth()
     const [organization, setOrganization] = useState<any>(null)
+
+    // Dialog States
+    const [openInvoice, setOpenInvoice] = useState(false)
+    const [openQuote, setOpenQuote] = useState(false)
+    const [openPayment, setOpenPayment] = useState(false)
+    const [openExpense, setOpenExpense] = useState(false)
+    const [openCustomer, setOpenCustomer] = useState(false)
+    const [openScanner, setOpenScanner] = useState(false)
 
     // Real-time data from IndexedDB
     const itemsCount = useLiveQuery(() => db.items.count()) ?? 0
@@ -119,16 +134,82 @@ export default function DashboardPage() {
 
             {/* Quick Actions */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
-                <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                    Quick Actions
+                <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Plus className="h-4 w-4" /> Quick Actions
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <ActionButton title="New Sale" icon={Plus} href="/dashboard/pos" />
-                    <ActionButton title="Add Product" icon={Box} href="/dashboard/inventory/new" />
-                    <ActionButton title="Add Customer" icon={UserPlus} href="/dashboard/customers" />
-                    <ActionButton title="View Reports" icon={FileText} href="/dashboard/reports" />
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                    <ActionButton
+                        title="Add Invoice"
+                        icon={FileCheck}
+                        onClick={() => setOpenInvoice(true)}
+                        color="text-emerald-600 dark:text-emerald-400"
+                    />
+                    <ActionButton
+                        title="Add Quote"
+                        icon={ClipboardList}
+                        onClick={() => setOpenQuote(true)}
+                        color="text-amber-600 dark:text-amber-400"
+                    />
+                    <ActionButton
+                        title="Add Payment"
+                        icon={CreditCard}
+                        onClick={() => setOpenPayment(true)}
+                        color="text-indigo-600 dark:text-indigo-400"
+                    />
+                    <ActionButton
+                        title="Add Receipt"
+                        icon={Receipt}
+                        onClick={() => setOpenExpense(true)}
+                        color="text-rose-600 dark:text-rose-400"
+                    />
+                    <ActionButton
+                        title="Scan Invoice"
+                        icon={Scan}
+                        onClick={() => setOpenScanner(true)}
+                        color="text-blue-600 dark:text-blue-400"
+                    />
+
+                    <div className="md:hidden lg:contents">
+                        <ActionButton
+                            title="New Sale (POS)"
+                            icon={Plus}
+                            href="/dashboard/pos"
+                            color="text-blue-600"
+                        />
+                        <ActionButton
+                            title="Add Product"
+                            icon={Box}
+                            href="/dashboard/inventory/new"
+                            color="text-gray-600"
+                        />
+                        <ActionButton
+                            title="Add Customer"
+                            icon={UserPlus}
+                            onClick={() => setOpenCustomer(true)}
+                            color="text-purple-600"
+                        />
+                        <ActionButton
+                            title="View Reports"
+                            icon={FileText}
+                            href="/dashboard/reports"
+                            color="text-slate-600"
+                        />
+                    </div>
                 </div>
             </div>
+
+            <QuickActionDialogs
+                openInvoice={openInvoice} setOpenInvoice={setOpenInvoice}
+                openQuote={openQuote} setOpenQuote={setOpenQuote}
+                openPayment={openPayment} setOpenPayment={setOpenPayment}
+                openExpense={openExpense} setOpenExpense={setOpenExpense}
+                openScanner={openScanner} setOpenScanner={setOpenScanner}
+            />
+
+            <CustomerDialog
+                open={openCustomer}
+                onOpenChange={setOpenCustomer}
+            />
 
             {/* Low Stock Alert */}
             <LowStockAlert className="mb-6" />
@@ -186,24 +267,28 @@ function StatCard({ title, value, icon: Icon, color }: any) {
     )
 }
 
-function ActionButton({ title, icon: Icon, href }: { title: string; icon: any; href?: string }) {
+function ActionButton({ title, icon: Icon, href, onClick, color }: { title: string; icon: any; href?: string; onClick?: () => void, color?: string }) {
     const content = (
         <>
-            <Icon className="h-5 w-5 mb-1.5 text-blue-600 dark:text-blue-400" />
-            <span className="text-xs font-medium text-gray-900 dark:text-white text-center">{title}</span>
+            <div className={`p-2 rounded-full bg-gray-50 dark:bg-gray-900 group-hover:bg-white dark:group-hover:bg-gray-800 transition-colors mb-1.5`}>
+                <Icon className={`h-5 w-5 ${color || 'text-blue-600 dark:text-blue-400'}`} />
+            </div>
+            <span className="text-[10px] md:text-xs font-medium text-gray-900 dark:text-white text-center">{title}</span>
         </>
     )
 
+    const className = "flex flex-col items-center justify-center p-3 border border-gray-100 dark:border-gray-700 rounded-xl hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all group active:scale-95 shadow-sm hover:shadow-md"
+
     if (href) {
         return (
-            <Link href={href} className="flex flex-col items-center justify-center p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
+            <Link href={href} className={className}>
                 {content}
             </Link>
         )
     }
 
     return (
-        <button className="flex flex-col items-center justify-center p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
+        <button onClick={onClick} className={className}>
             {content}
         </button>
     )

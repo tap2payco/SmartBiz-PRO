@@ -1,0 +1,245 @@
+﻿
+> smartbiz-web@1.0.0 build
+> next build
+
+  Γû▓ Next.js 14.2.21
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+node.exe : Failed to 
+compile.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Failed to com   
+ pile.:String) [],     
+RemoteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+
+./src/components/shared
+/ExpenseDialog.tsx
+Error: 
+  [31mx[0m the name 
+`toast` is defined 
+multiple times
+    ,-[[36;1;4mC:\User
+s\Pius\SmartBiz PRO\app
+s\web\src\components\sh
+ared\ExpenseDialog.tsx
+[0m:2:1]
+ [2m 2[0m | 
+ [2m 3[0m | import { 
+useState, useEffect, 
+useRef } from 'react'
+ [2m 4[0m | import { 
+useAuth } from '@/conte
+xts/AuthContext'
+ [2m 5[0m | import { 
+toast } from 'sonner'
+    : [31;1m         
+^^|^^[0m
+    :            
+[31;1m`-- 
+[31;1mprevious 
+definition of `toast` 
+here[0m[0m
+ [2m 6[0m | import { 
+Loader2, Camera, 
+Upload, Trash2, X, 
+Scan } from 
+'lucide-react'
+ [2m 7[0m | import { 
+QRScanner } from 
+'./QRScanner'
+ [2m 8[0m | import {
+ [2m 9[0m |     
+Dialog,
+ [2m10[0m |     
+DialogContent,
+ [2m11[0m |     
+DialogDescription,
+ [2m12[0m |     
+DialogHeader,
+ [2m13[0m |     
+DialogTitle,
+ [2m14[0m |     
+DialogFooter,
+ [2m15[0m | } from '@
+/components/ui/dialog'
+ [2m16[0m | import {
+ [2m17[0m |     
+Select,
+ [2m18[0m |     
+SelectContent,
+ [2m19[0m |     
+SelectItem,
+ [2m20[0m |     
+SelectTrigger,
+ [2m21[0m |     
+SelectValue,
+ [2m22[0m | } from '@
+/components/ui/select'
+ [2m23[0m | import { 
+Button } from '@/compon
+ents/ui/button'
+ [2m24[0m | import { 
+Input } from 
+'@/components/ui/input'
+ [2m25[0m | import { 
+Label } from 
+'@/components/ui/label'
+ [2m26[0m | import { 
+Textarea } from '@/comp
+onents/ui/textarea'
+ [2m27[0m | import { 
+toast } from 'sonner'
+    : [33;1m         
+^^|^^[0m
+    :            
+[33;1m`-- 
+[33;1m`toast` 
+redefined here[0m[0m
+ [2m28[0m | 
+ [2m29[0m | 
+interface 
+ExpenseDialogProps {
+ [2m29[0m |     
+open: boolean
+    `----
+
+Import trace for 
+requested module:
+./src/components/shared
+/ExpenseDialog.tsx
+./src/components/dashbo
+ard/QuickActionDialogs.
+tsx
+./src/app/dashboard/pag
+e.tsx
+
+./src/app/dashboard/fin
+ance/reports/page.tsx
+Error: 
+  [31mx[0m 
+Expression expected
+    ,-[[36;1;4mC:\User
+s\Pius\SmartBiz PRO\app
+s\web\src\app\dashboard
+\finance\reports\page.t
+sx[0m:35:1]
+ [2m35[0m | import { 
+formatCurrency } from 
+'@/lib/utils'
+ [2m36[0m | 
+ [2m37[0m | margin: 
+number
+ [2m38[0m | }
+    : [31;1m^[0m
+ [2m39[0m | 
+ [2m40[0m | 
+interface TaxData {
+ [2m40[0m |     
+vatOutput: number
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for 
+requested module:
+./src/app/dashboard/fin
+ance/reports/page.tsx
+
+./src/app/dashboard/set
+tings/page.tsx
+Error: 
+  [31mx[0m Expected 
+';', '}' or <eof>
+    ,-[[36;1;4mC:\User
+s\Pius\SmartBiz PRO\app
+s\web\src\app\dashboard
+\settings\page.tsx[0m:
+32:1]
+ [2m32[0m |     
+import { LocationsTab 
+} from '@/components/se
+ttings/LocationsTab'
+ [2m33[0m |     
+import { UsersTab } 
+from '@/components/sett
+ings/UsersTab'
+ [2m34[0m |     
+ [2m35[0m | [31;1m,
+[0m[31;1m-[0m[31;1m>
+[0m currency: 
+z.string().length(3, 
+"Currency code must be 
+3 characters (e.g. 
+TZS)"),
+ [2m36[0m | [31;1m|
+[0m[31;1m-[0m[31;1m>
+[0m     taxEnabled: z.
+boolean().default(true)
+,
+    : [31;1m`[0m[31;
+1m---[0m[33;1m       
+       ^[0m
+    : [31;1m`[0m[31;
+1m---[0m[31;1m-[0m 
+[31;1mThis is the 
+expression part of an 
+expression 
+statement[0m
+ [2m37[0m |          
+   vatRate: z.number().
+min(0).max(100).default
+(18),
+ [2m38[0m |          
+       
+fiscalYearStart: z.stri
+ng().regex(/^\d{2}-\d{2
+}$/, "Format must be MM
+-DD").default('01-01'),
+ [2m38[0m |     })
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for 
+requested module:
+./src/app/dashboard/set
+tings/page.tsx
+
+
+> Build failed because 
+of webpack errors
+npm error Lifecycle 
+script `build` failed 
+with error:
+npm error code 1
+npm error path 
+C:\Users\Pius\SmartBiz 
+PRO\apps\web
+npm error workspace 
+smartbiz-web@1.0.0
+npm error location 
+C:\Users\Pius\SmartBiz 
+PRO\apps\web
+npm error command 
+failed
+npm error command C:\Wi
+ndows\system32\cmd.exe 
+/d /s /c next build

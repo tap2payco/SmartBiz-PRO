@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { SaleDetailsModal } from '@/components/sales/SaleDetailsModal'
+import { TransactionDialog } from '@/components/shared/TransactionDialog'
 
 export default function AccountsReceivablePage() {
     const { user, getToken } = useAuth()
@@ -32,6 +33,7 @@ export default function AccountsReceivablePage() {
     const [selectedSale, setSelectedSale] = useState<any>(null)
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+    const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
 
     // Stats
     const totalReceivable = sales
@@ -112,6 +114,10 @@ export default function AccountsReceivablePage() {
                     <p className="text-gray-500 dark:text-gray-400">Manage outstanding invoices and collect payments.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsInvoiceDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Quick Invoice
+                    </Button>
                     <Link href="/dashboard/sales/invoices/new">
                         <Button>
                             <Plus className="h-4 w-4 mr-2" />
@@ -275,6 +281,15 @@ export default function AccountsReceivablePage() {
                     onPaymentComplete={fetchSales}
                 />
             )}
+
+            <TransactionDialog
+                type="INVOICE"
+                open={isInvoiceDialogOpen}
+                onOpenChange={(open) => {
+                    setIsInvoiceDialogOpen(open)
+                    if (!open) fetchSales()
+                }}
+            />
         </div>
     )
 }

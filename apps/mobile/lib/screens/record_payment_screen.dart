@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../services/document_service.dart';
+import 'scanner_screen.dart';
 
 class RecordPaymentScreen extends StatefulWidget {
   const RecordPaymentScreen({super.key});
@@ -31,7 +32,17 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
           children: [
             const Text('Link to Invoice', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            _buildInvoiceSelector(),
+            Row(
+              children: [
+                Expanded(child: _buildInvoiceSelector()),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  onPressed: _scanInvoice,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  tooltip: 'Scan Invoice QR',
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
@@ -74,6 +85,34 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
         ? 'Tap to select an invoice' 
         : 'INV-${_selectedInvoice!['id'].toString().substring(0, 8).toUpperCase()} - ${NumberFormat.simpleCurrency(name: 'KES').format(_selectedInvoice!['total_amount'])}'),
     );
+  }
+
+  void _scanInvoice() async {
+    final code = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScannerScreen()),
+    );
+    
+    if (code != null && mounted) {
+      final db = context.read<DatabaseService>();
+      final invoices = await db.getInvoices();
+      
+      // Try to match by ID or full ID string from QR
+      final invoice = invoices.firstWhere(
+        (inv) => inv['id'].toString() == code || code.contains(inv['id'].toString()),
+        orElse: () => {},
+      );
+
+      if (invoice.isNotEmpty) {
+        setState(() {
+          _selectedInvoice = invoice;
+          _amountController.text = invoice['total_amount'].toString();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Matched Invoice #${invoice['id'].toString().substring(0,8).toUpperCase()}')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invoice not found in system')));
+      }
+    }
   }
 
   void _selectInvoice() async {

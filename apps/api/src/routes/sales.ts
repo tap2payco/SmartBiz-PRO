@@ -55,6 +55,108 @@ app.get('/', async (c) => {
     }
 })
 
+// GET /sales/payments - List all payments
+app.get('/payments', async (c) => {
+    try {
+        const organizationId = c.get('organizationId')
+        if (!organizationId) return c.json({ error: 'Unauthorized' }, 401)
+
+        const result = await db.query.payments.findMany({
+            where: eq(payments.organizationId, organizationId),
+            with: {
+                sale: true,
+                // customer: true, // payments table doesn't have customerId directly, it's via sale. But we can join if needed.
+            },
+            orderBy: [desc(payments.createdAt)],
+        })
+
+        return c.json(result)
+    } catch (error) {
+        console.error('Error fetching payments:', error)
+        return c.json({ error: 'Failed to fetch payments' }, 500)
+    }
+})
+
+// POST /sales/payments - Record a manual payment (can be unlinked or linked to invoice/quote)
+app.post('/payments', async (c) => {
+    try {
+        const organizationId = c.get('organizationId')
+        const user = c.get('user')
+        if (!organizationId) return c.json({ error: 'Unauthorized' }, 401)
+
+        const body = await c.req.json()
+        const paymentSchema = z.object({
+            customerId: z.string().uuid().optional(),
+            saleId: z.string().uuid().optional(),
+            amount: z.number().positive(),
+            method: z.enum(['CASH', 'MOBILE_MONEY', 'CARD', 'BANK_TRANSFER', 'CREDIT']),
+            reference: z.string().optional(),
+            accountId: z.string().uuid().optional(),
+            notes: z.string().optional()
+        })
+
+        const validated = paymentSchema.parse(body)
+
+        const result = await db.transaction(async (tx: any) => {
+            // 1. Create Payment Record
+            const [payment] = await tx.insert(payments).values({
+                organizationId,
+                saleId: validated.saleId,
+                amount: String(validated.amount),
+                method: validated.method,
+                reference: validated.reference,
+                notes: validated.notes,
+                createdBy: user?.id,
+            }).returning()
+
+            // 2. Adjust Bank Account if provided
+            if (validated.accountId) {
+                await tx.insert(bankTransactions).values({
+                    organizationId,
+                    accountId: validated.accountId,
+                    type: 'DEPOSIT',
+                    amount: String(validated.amount),
+                    transactionDate: new Date().toISOString(),
+                    description: `Payment received ${validated.reference ? `(${validated.reference})` : ''}`,
+                    referenceType: 'PAYMENT',
+                    referenceId: payment.id,
+                    createdBy: user?.id || ''
+                })
+
+                await tx
+                    .update(bankAccounts)
+                    .set({
+                        currentBalance: sql`${bankAccounts.currentBalance} + ${validated.amount}`,
+                        updatedAt: new Date()
+                    })
+                    .where(eq(bankAccounts.id, validated.accountId))
+            }
+
+            // 3. If saleId is present, update the sale balance
+            if (validated.saleId) {
+                const sale = await tx.query.sales.findFirst({
+                    where: eq(sales.id, validated.saleId)
+                })
+                if (sale) {
+                    const newPaidTotal = parseFloat(sale.paidAmount) + validated.amount
+                    await tx.update(sales).set({
+                        paidAmount: String(newPaidTotal),
+                        paymentStatus: newPaidTotal >= parseFloat(sale.totalAmount) ? 'PAID' : 'PARTIAL',
+                        updatedAt: new Date()
+                    }).where(eq(sales.id, validated.saleId))
+                }
+            }
+
+            return payment
+        })
+
+        return c.json(result, 201)
+    } catch (error: any) {
+        console.error('Record Payment Error:', error)
+        return c.json({ error: error.message || 'Failed to record payment' }, 500)
+    }
+})
+
 // POST /sales - Create a new sale
 app.post('/', async (c) => {
     try {

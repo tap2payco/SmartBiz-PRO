@@ -31,6 +31,7 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/utils'
 import { Quotation } from '@smartbiz/shared'
+import { TransactionDialog } from '@/components/shared/TransactionDialog'
 
 export default function QuotationsPage() {
     const { user, getToken } = useAuth()
@@ -38,6 +39,7 @@ export default function QuotationsPage() {
     const [quotations, setQuotations] = useState<Quotation[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
+    const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false)
 
     const fetchQuotations = async () => {
         setIsLoading(true)
@@ -141,10 +143,16 @@ export default function QuotationsPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quotations</h1>
                     <p className="text-gray-500 dark:text-gray-400">Create and manage estimates for your customers.</p>
                 </div>
-                <Button onClick={() => router.push('/dashboard/sales/quotations/new')}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Quotation
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsQuoteDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Quick Quote
+                    </Button>
+                    <Button onClick={() => router.push('/dashboard/sales/quotations/new')}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Quotation
+                    </Button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -259,6 +267,15 @@ export default function QuotationsPage() {
                     </table>
                 </div>
             </div>
+
+            <TransactionDialog
+                type="QUOTE"
+                open={isQuoteDialogOpen}
+                onOpenChange={(open) => {
+                    setIsQuoteDialogOpen(open)
+                    if (!open) fetchQuotations() // Refresh after close
+                }}
+            />
         </div>
     )
 }

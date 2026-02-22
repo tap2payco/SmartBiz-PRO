@@ -13,8 +13,10 @@ import {
     Briefcase,
     Save,
     Loader2,
-    AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Plus,
+    FileText,
+    AlertCircle
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -32,10 +34,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LocationsTab } from '@/components/settings/LocationsTab'
 import { UsersTab } from '@/components/settings/UsersTab'
 
-currency: z.string().length(3, "Currency code must be 3 characters (e.g. TZS)"),
-    taxEnabled: z.boolean().default(true),
-        vatRate: z.number().min(0).max(100).default(18),
-            fiscalYearStart: z.string().regex(/^\d{2}-\d{2}$/, "Format must be MM-DD").default('01-01'),
+const settingsSchema = z.object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    industry: z.enum(['RETAIL', 'WHOLESALE', 'MANUFACTURING', 'HEALTHCARE', 'EDUCATION', 'NGO']),
+    country: z.string().length(2, "Country code must be 2 characters (e.g. TZ)"),
+    currency: z.string().length(3, "Currency code must be 3 characters (e.g. TZS)"),
+    taxEnabled: z.boolean(),
+    vatRate: z.number().min(0).max(100),
+    fiscalYearStart: z.string().regex(/^\d{2}-\d{2}$/, "Format must be MM-DD"),
 })
 
 type SettingsFormData = z.infer<typeof settingsSchema>

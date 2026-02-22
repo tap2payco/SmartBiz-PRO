@@ -6,6 +6,10 @@ import 'dart:math' as math;
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/sync_service.dart';
+import 'sales_screen.dart';
+import 'scanner_screen.dart';
+import 'add_product_screen.dart';
+import 'placeholder_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -267,17 +271,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildActionChip(String label, IconData icon, Color color, int drawerIndex) {
     return Expanded(
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           if (drawerIndex == -1) {
-            // Scanner action — use POS scanner
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const _ScannerRedirect()));
-          } else {
-            // Navigate via drawer index
-            final homeState = context.findAncestorStateOfType<State>();
-            // For now, just show a message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Navigate to $label via the drawer menu.'), behavior: SnackBarBehavior.floating),
+            // Scanner action
+            final result = await Navigator.push<String>(
+              context,
+              MaterialPageRoute(builder: (_) => const ScannerScreen()),
             );
+            if (result != null && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Scanned: $result'), behavior: SnackBarBehavior.floating),
+              );
+            }
+          } else {
+            // Navigate via HomeShell using a callback or direct route
+            // For now, since it's a shell, we can push the screen directly for quick access
+            Widget screen;
+            switch (drawerIndex) {
+              case 14:
+                screen = const SalesScreen();
+                break;
+              case 2:
+                screen = const AddProductScreen();
+                break;
+              default:
+                screen = const PlaceholderScreen(title: 'Feature');
+            }
+            
+            Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
           }
         },
         borderRadius: BorderRadius.circular(12),
@@ -403,17 +424,3 @@ class _SimpleChartPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-// Simple redirect widget for the scanner quick action
-class _ScannerRedirect extends StatelessWidget {
-  const _ScannerRedirect();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Scanner')),
-      body: const Center(
-        child: Text('Use the scanner from POS Terminal or Inventory for best results.'),
-      ),
-    );
-  }
-}

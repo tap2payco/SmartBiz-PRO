@@ -15,7 +15,8 @@ import {
     Menu,
     X,
     BarChart3,
-    RotateCcw
+    RotateCcw,
+    Briefcase
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

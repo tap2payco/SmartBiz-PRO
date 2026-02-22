@@ -15,7 +15,7 @@ const financeModules = [
     {
         title: 'Payments',
         description: 'View payment history and outgoing transactions',
-        href: '/dashboard/finance/bills',
+        href: '/dashboard/finance/payments',
         icon: DollarSign,
         color: 'bg-green-500'
     },
