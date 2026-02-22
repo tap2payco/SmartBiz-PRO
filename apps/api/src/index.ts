@@ -116,6 +116,7 @@ import finance from './routes/finance';
 import expensesRoute from './routes/expenses';
 import banking from './routes/banking';
 import returns from './routes/returns';
+import projects from './routes/projects';
 
 // Mount routes
 app.route('/auth', auth);
@@ -181,6 +182,10 @@ import transfers from './routes/transfers';
 app.use('/transfers', authMiddleware);
 app.use('/transfers/*', authMiddleware);
 app.route('/transfers', transfers);
+
+app.use('/projects', authMiddleware);
+app.use('/projects/*', authMiddleware);
+app.route('/projects', projects);
 
 app.route('/transfers', transfers);
 

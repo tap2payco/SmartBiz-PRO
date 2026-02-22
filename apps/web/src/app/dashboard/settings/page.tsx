@@ -32,11 +32,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LocationsTab } from '@/components/settings/LocationsTab'
 import { UsersTab } from '@/components/settings/UsersTab'
 
-const settingsSchema = z.object({
-    name: z.string().min(2, "Business name is required"),
-    industry: z.enum(['RETAIL', 'WHOLESALE', 'HEALTHCARE', 'EDUCATION', 'NGO', 'MANUFACTURING']),
-    country: z.string().length(2, "Country code must be 2 characters (e.g. TZ)"),
-    currency: z.string().length(3, "Currency code must be 3 characters (e.g. TZS)"),
+currency: z.string().length(3, "Currency code must be 3 characters (e.g. TZS)"),
+    taxEnabled: z.boolean().default(true),
+        vatRate: z.number().min(0).max(100).default(18),
+            fiscalYearStart: z.string().regex(/^\d{2}-\d{2}$/, "Format must be MM-DD").default('01-01'),
 })
 
 type SettingsFormData = z.infer<typeof settingsSchema>
@@ -67,10 +66,10 @@ export default function SettingsPage() {
                     if (data.organization) {
                         setOrganization(data.organization)
                         reset({
-                            name: data.organization.name,
-                            industry: data.organization.industry,
-                            country: data.organization.country,
                             currency: data.organization.currency,
+                            taxEnabled: data.organization.settings?.taxEnabled ?? true,
+                            vatRate: data.organization.settings?.vatRate ?? 18,
+                            fiscalYearStart: data.organization.settings?.fiscalYearStart ?? '01-01',
                         })
                     }
                 }
@@ -91,6 +90,19 @@ export default function SettingsPage() {
             const token = await getToken()
             if (!token) return
 
+            const payload = {
+                name: data.name,
+                industry: data.industry,
+                country: data.country,
+                currency: data.currency,
+                settings: {
+                    ...organization?.settings,
+                    taxEnabled: data.taxEnabled,
+                    vatRate: data.vatRate,
+                    fiscalYearStart: data.fiscalYearStart,
+                }
+            }
+
             const method = organization ? 'PATCH' : 'POST'
             const url = organization
                 ? `${process.env.NEXT_PUBLIC_API_URL}/organizations/me`
@@ -102,7 +114,7 @@ export default function SettingsPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             })
 
             if (res.ok) {
@@ -150,9 +162,10 @@ export default function SettingsPage() {
 
             <Tabs defaultValue="general" className="w-full">
                 <TabsList className="mb-4">
-                    <TabsTrigger value="general">General Information</TabsTrigger>
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="finance">Finance & Tax</TabsTrigger>
                     <TabsTrigger value="locations">Locations</TabsTrigger>
-                    <TabsTrigger value="users">Users & Roles</TabsTrigger>
+                    <TabsTrigger value="users">Users</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general">
@@ -256,6 +269,93 @@ export default function SettingsPage() {
                                         Save Business Settings
                                     </>
                                 )}
+                            </Button>
+                        </div>
+                    </form>
+                </TabsContent>
+
+                <TabsContent value="finance">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                                <h2 className="text-lg font-semibold flex items-center gap-2">
+                                    <Coins className="h-5 w-5 text-amber-600" />
+                                    Taxation Settings
+                                </h2>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                                    <div className="space-y-0.5">
+                                        <Label>Enable Taxation</Label>
+                                        <p className="text-xs text-muted-foreground">Calculate tax on sales and purchases</p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        {...register('taxEnabled')}
+                                        className="h-5 w-5 rounded border-gray-300 text-blue-600"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vatRate">Default VAT/GST Rate (%)</Label>
+                                        <Input
+                                            id="vatRate"
+                                            type="number"
+                                            {...register('vatRate', { valueAsNumber: true })}
+                                            placeholder="e.g. 18"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fiscalYearStart">Fiscal Year Start (MM-DD)</Label>
+                                        <Input
+                                            id="fiscalYearStart"
+                                            {...register('fiscalYearStart')}
+                                            placeholder="e.g. 01-01"
+                                        />
+                                        <p className="text-[10px] text-gray-400">Month and Day your business year begins</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                                <h2 className="text-lg font-semibold flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-blue-600" />
+                                    Accounting Periods
+                                </h2>
+                            </div>
+                            <div className="p-6">
+                                <div className="space-y-4">
+                                    <div className="p-4 border rounded-lg flex items-center justify-between">
+                                        <div>
+                                            <div className="font-bold">2024 Fiscal Year</div>
+                                            <div className="text-xs text-green-600">Open</div>
+                                        </div>
+                                        <Button variant="outline" size="sm" disabled>Current</Button>
+                                    </div>
+                                    <div className="p-4 border rounded-lg flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 opacity-60">
+                                        <div>
+                                            <div className="font-bold">2023 Fiscal Year</div>
+                                            <div className="text-xs text-gray-500">Closed</div>
+                                        </div>
+                                        <Button variant="ghost" size="sm">View Reports</Button>
+                                    </div>
+                                    <Button variant="outline" className="w-full border-dashed">
+                                        <Plus className="mr-2 h-4 w-4" /> Add New Accounting Period
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                            <Button
+                                type="submit"
+                                disabled={isSaving}
+                                className="bg-blue-600"
+                            >
+                                {isSaving ? 'Saving...' : 'Save Financial Settings'}
                             </Button>
                         </div>
                     </form>

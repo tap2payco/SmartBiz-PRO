@@ -5,6 +5,8 @@ import { items, itemCategories as categories, stockMovements } from '@smartbiz/d
 import { stakeholders } from '@smartbiz/db/src/schema/stakeholders'
 import { sales, saleItems } from '@smartbiz/db/src/schema/sales'
 import { organizations } from '@smartbiz/db/src/schema/auth'
+import { projects } from '@smartbiz/db/src/schema/projects'
+import { expenses, expenseCategories } from '@smartbiz/db/src/schema/expenses'
 import { gt, eq, and, sql } from 'drizzle-orm'
 
 const app = new Hono<{ Variables: { user: any, organizationId: string } }>()
@@ -46,7 +48,10 @@ app.get('/pull', async (c) => {
             changedItems,
             changedCategories,
             changedCustomers,
-            changedSales
+            changedSales,
+            changedProjects,
+            changedExpenses,
+            changedExpenseCategories
         ] = await Promise.all([
             db.select().from(items).where(and(
                 eq(items.organizationId, organizationId),
@@ -63,6 +68,18 @@ app.get('/pull', async (c) => {
             db.select().from(sales).where(and(
                 eq(sales.organizationId, organizationId),
                 gt(sales.updatedAt, since)
+            )),
+            db.select().from(projects).where(and(
+                eq(projects.organizationId, organizationId),
+                gt(projects.updatedAt, since)
+            )),
+            db.select().from(expenses).where(and(
+                eq(expenses.organizationId, organizationId),
+                gt(expenses.updatedAt, since)
+            )),
+            db.select().from(expenseCategories).where(and(
+                eq(expenseCategories.organizationId, organizationId),
+                gt(expenseCategories.createdAt, since) // No updatedAt on expenseCategories in current schema
             ))
         ])
 
@@ -86,6 +103,21 @@ app.get('/pull', async (c) => {
                 sales: {
                     created: [],
                     updated: changedSales,
+                    deleted: []
+                },
+                projects: {
+                    created: [],
+                    updated: changedProjects,
+                    deleted: []
+                },
+                expenses: {
+                    created: [],
+                    updated: changedExpenses,
+                    deleted: []
+                },
+                expenseCategories: {
+                    created: [],
+                    updated: changedExpenseCategories,
                     deleted: []
                 }
             },

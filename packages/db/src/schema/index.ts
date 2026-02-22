@@ -8,4 +8,5 @@ export * from './expenses';
 export * from './banking';
 export * from './returns';
 export * from './quotations';
+export * from './projects';
 

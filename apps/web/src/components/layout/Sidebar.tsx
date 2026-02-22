@@ -35,6 +35,7 @@ const NAVIGATION = [
     { name: 'Customers', href: '/dashboard/customers', icon: Users },
     { name: 'Suppliers', href: '/dashboard/suppliers', icon: Truck },
     { name: 'Purchases', href: '/dashboard/purchases', icon: FileText },
+    { name: 'Projects', href: '/dashboard/projects', icon: Briefcase },
     { name: 'Finance', href: '/dashboard/finance', icon: Wallet },
     { name: 'Reports', href: '/dashboard/reports', icon: BarChart3 },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },

@@ -6,7 +6,10 @@ import {
     expenses,
     items,
     stockMovements,
-    purchaseOrders
+    items,
+    stockMovements,
+    purchaseOrders,
+    supplierInvoices
 } from '@smartbiz/db';
 import { eq, and, sql, gte, lte, desc, or } from 'drizzle-orm';
 import { User } from '@supabase/supabase-js';
@@ -303,6 +306,57 @@ app.get('/inventory-valuation', async (c) => {
     } catch (error) {
         console.error('Inventory Valuation Error:', error);
         return c.json({ error: 'Failed to generate inventory valuation' }, 500);
+    }
+});
+
+// GET /reports/tax — VAT/GST Summary
+app.get('/tax', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date();
+    end.setHours(23, 59, 59, 999);
+
+    try {
+        // 1. VAT Output (from Sales)
+        const [salesTaxResult] = await db
+            .select({ total: sql<string>`sum(${sales.taxTotal})` })
+            .from(sales)
+            .where(and(
+                eq(sales.organizationId, profile.organizationId),
+                gte(sales.createdAt, start),
+                lte(sales.createdAt, end),
+                eq(sales.status, 'COMPLETED')
+            ));
+
+        // 2. VAT Input (from Supplier Invoices/Bills)
+        const [purchaseTaxResult] = await db
+            .select({ total: sql<string>`sum(${supplierInvoices.taxTotal})` })
+            .from(supplierInvoices)
+            .where(and(
+                eq(supplierInvoices.organizationId, profile.organizationId),
+                gte(supplierInvoices.invoiceDate, start.toISOString().split('T')[0]),
+                lte(supplierInvoices.invoiceDate, end.toISOString().split('T')[0]),
+                eq(supplierInvoices.status, 'PAID') // Usually claimable on paid bills
+            ));
+
+        const vatOutput = parseFloat(salesTaxResult?.total || '0');
+        const vatInput = parseFloat(purchaseTaxResult?.total || '0');
+        const netTax = vatOutput - vatInput;
+
+        return c.json({
+            period: { start, end },
+            vatOutput,
+            vatInput,
+            netTax,
+            status: netTax >= 0 ? 'PAYABLE' : 'CLAIMABLE'
+        });
+    } catch (error) {
+        console.error('Tax Report Error:', error);
+        return c.json({ error: 'Failed to generate tax report' }, 500);
     }
 });
 

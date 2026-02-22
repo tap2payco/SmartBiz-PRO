@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "0969e036-a62d-41a6-84ac-b7a1c72e459d"
+      }
+    },
+    "android": {
+      "package": "SmartBiz.PRO.GO"
+    }
+  }
+}
