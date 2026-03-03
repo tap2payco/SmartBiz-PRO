@@ -6,19 +6,17 @@ import {
     expenses,
     items,
     stockMovements,
-    items,
-    stockMovements,
     purchaseOrders,
     supplierInvoices
 } from '@smartbiz/db';
-import { eq, and, sql, gte, lte, desc, or } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, desc, or, min } from 'drizzle-orm';
 import { User } from '@supabase/supabase-js';
 import { Profile } from '@smartbiz/shared';
 
 type Variables = {
-    user: User;
-    profile: Profile | null;
-    organizationId: string | null;
+    user: any;
+    profile: any;
+    organizationId: string;
 };
 
 const app = new Hono<{ Variables: Variables }>();
@@ -357,6 +355,86 @@ app.get('/tax', async (c) => {
     } catch (error) {
         console.error('Tax Report Error:', error);
         return c.json({ error: 'Failed to generate tax report' }, 500);
+    }
+});
+
+// GET /reports/analytics/sales-trends?period=month|week — Advanced sales aggregation
+app.get('/analytics/sales-trends', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const period = c.req.query('period') || 'month';
+    const now = new Date();
+    let startDate: Date;
+
+    if (period === 'week') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    } else {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    }
+
+    try {
+        const results = await db
+            .select({
+                period: period === 'week' ? sql<string>`TO_CHAR(${sales.createdAt}, 'Dy')` : sql<string>`TO_CHAR(${sales.createdAt}, 'DD Mon')`,
+                revenue: sql<string>`sum(${sales.totalAmount})`,
+                orders: sql<string>`count(*)`,
+            })
+            .from(sales)
+            .where(and(
+                eq(sales.organizationId, profile.organizationId),
+                eq(sales.status, 'COMPLETED'),
+                gte(sales.createdAt, startDate)
+            ))
+            .groupBy(period === 'week' ? sql`TO_CHAR(${sales.createdAt}, 'Dy')` : sql`TO_CHAR(${sales.createdAt}, 'DD Mon')`)
+            .orderBy(min(sales.createdAt));
+
+        return c.json({ data: results });
+    } catch (error) {
+        console.error('Sales Trends Error:', error);
+        return c.json({ error: 'Failed to generate sales trends' }, 500);
+    }
+});
+
+// GET /reports/analytics/inventory-performance — Stock turnover & aging
+app.get('/analytics/inventory-performance', async (c) => {
+    const profile = c.get('profile');
+    if (!profile?.organizationId) return c.json({ error: 'Unauthorized' }, 401);
+
+    try {
+        // Simple turnover calculation: Sales Quantity / Average Stock (MVP: Total Sales / Current Stock)
+        const results = await db
+            .select({
+                itemId: items.id,
+                name: items.name,
+                sku: items.sku,
+                totalSold: sql<string>`COALESCE(SUM(CASE WHEN ${stockMovements.type} = 'SALE' THEN ABS(${stockMovements.quantity}) ELSE 0 END), 0)`,
+                currentStock: sql<string>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+                lastMovement: sql<string>`MAX(${stockMovements.createdAt})`,
+            })
+            .from(items)
+            .leftJoin(stockMovements, eq(stockMovements.itemId, items.id))
+            .where(eq(items.organizationId, profile.organizationId))
+            .groupBy(items.id, items.name, items.sku)
+            .limit(10);
+
+        const performance = results.map(r => {
+            const sold = parseFloat(r.totalSold || '0');
+            const stock = parseFloat(r.currentStock || '0');
+            const daysSinceLastMove = r.lastMovement ? Math.floor((Date.now() - new Date(r.lastMovement).getTime()) / (1000 * 60 * 60 * 24)) : 365;
+
+            return {
+                ...r,
+                turnoverRate: stock > 0 ? (sold / stock).toFixed(2) : '0',
+                status: daysSinceLastMove > 90 ? 'STAGNANT' : daysSinceLastMove > 30 ? 'SLOW' : 'ACTIVE',
+                daysSinceLastMove
+            };
+        });
+
+        return c.json({ data: performance });
+    } catch (error) {
+        console.error('Inventory Performance Error:', error);
+        return c.json({ error: 'Failed to generate inventory performance' }, 500);
     }
 });
 

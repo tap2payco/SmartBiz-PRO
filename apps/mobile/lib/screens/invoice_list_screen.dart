@@ -25,7 +25,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   Future<void> _loadInvoices() async {
     setState(() => _isLoading = true);
     final db = Provider.of<DatabaseService>(context, listen: false);
-    final data = await db.getSales();
+    final data = await db.getInvoices();
     setState(() {
       _invoices = data;
       _isLoading = false;
@@ -34,25 +34,24 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Widget body;
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_invoices.isEmpty) {
-      return const Center(
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_invoices.isEmpty) {
+      body = const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.receipt_long, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text('No invoices found.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Tap + to create your first invoice', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
-    }
-
-    return Scaffold(
-      body: RefreshIndicator(
+    } else {
+      body = RefreshIndicator(
         onRefresh: _loadInvoices,
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -61,7 +60,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           itemBuilder: (context, index) {
             final invoice = _invoices[index];
             final date = DateTime.fromMillisecondsSinceEpoch(invoice['created_at']);
-            final total = invoice['total_amount'] as double;
+            final total = (invoice['total_amount'] as num).toDouble();
 
             return Card(
               child: ListTile(
@@ -85,15 +84,19 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      NumberFormat.currency(symbol: 'KSh ').format(total),
+                      NumberFormat.currency(symbol: 'TZS ').format(total),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    const Text(
-                      'Paid',
-                      style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
+                    Text(
+                      invoice['status'] == 'PAID' ? 'Paid' : 'Unpaid',
+                      style: TextStyle(
+                        color: invoice['status'] == 'PAID' ? Colors.green : Colors.orange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -108,7 +111,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             );
           },
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      body: body,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(

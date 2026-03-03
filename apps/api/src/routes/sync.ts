@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db } from '@smartbiz/db'
-import { items, itemCategories as categories, stockMovements } from '@smartbiz/db/src/schema/inventory'
-import { stakeholders } from '@smartbiz/db/src/schema/stakeholders'
-import { sales, saleItems } from '@smartbiz/db/src/schema/sales'
-import { organizations } from '@smartbiz/db/src/schema/auth'
-import { projects } from '@smartbiz/db/src/schema/projects'
-import { expenses, expenseCategories } from '@smartbiz/db/src/schema/expenses'
+import { items, itemCategories as categories, stockMovements } from '@smartbiz/db'
+import { stakeholders } from '@smartbiz/db'
+import { sales, saleItems } from '@smartbiz/db'
+import { organizations } from '@smartbiz/db'
+import { projects } from '@smartbiz/db'
+import { expenses, expenseCategories } from '@smartbiz/db'
 import { gt, eq, and, sql } from 'drizzle-orm'
 
 const app = new Hono<{ Variables: { user: any, organizationId: string } }>()
@@ -25,6 +25,11 @@ const pushSchema = z.object({
             deleted: z.array(z.string()),
         }).optional(),
         customers: z.object({
+            created: z.array(z.any()),
+            updated: z.array(z.any()),
+            deleted: z.array(z.string()),
+        }).optional(),
+        expenses: z.object({
             created: z.array(z.any()),
             updated: z.array(z.any()),
             deleted: z.array(z.string()),
@@ -131,10 +136,82 @@ app.get('/pull', async (c) => {
 
 // POST /push - Push changes from client
 app.post('/push', async (c) => {
-    // This is a placeholder. A true V2 Push would handle batch updates transactionally.
-    // For now, clients are still using individual REST endpoints which is fine.
-    // We will implement this for Mobile App later.
-    return c.json({ message: 'Push endpoint ready for V2' })
+    const organizationId = c.get('organizationId')
+    const user = c.get('user')
+    if (!organizationId) return c.json({ error: 'Unauthorized' }, 401)
+
+    try {
+        const body = await c.req.json()
+        const { changes } = pushSchema.parse(body)
+
+        const results = await db.transaction(async (tx: any) => {
+            const syncResults: any = {
+                sales: { created: 0 },
+                expenses: { created: 0 }
+            }
+
+            // 1. Process Sales
+            if (changes.sales?.created) {
+                for (const sale of changes.sales.created) {
+                    // Basic duplicate check by ID (since mobile provides the ID)
+                    const existing = await tx.query.sales.findFirst({
+                        where: eq(sales.id, sale.id)
+                    })
+
+                    if (!existing) {
+                        await tx.insert(sales).values({
+                            id: sale.id,
+                            organizationId,
+                            customerId: sale.customerId,
+                            saleNumber: `SALE-${sale.id.substring(0, 8).toUpperCase()}`,
+                            subtotal: String(sale.totalAmount), // Simplistic mapping for now
+                            totalAmount: String(sale.totalAmount),
+                            paidAmount: String(sale.totalAmount),
+                            paymentStatus: 'PAID',
+                            createdAt: new Date(sale.createdAt),
+                            updatedAt: new Date(sale.updatedAt),
+                            createdBy: user?.id,
+                        })
+                        syncResults.sales.created++
+                    }
+                }
+            }
+
+            // 2. Process Expenses
+            if (changes.expenses?.created) {
+                for (const exp of changes.expenses.created) {
+                    const existing = await tx.query.expenses.findFirst({
+                        where: eq(expenses.id, exp.id)
+                    })
+
+                    if (!existing) {
+                        await tx.insert(expenses).values({
+                            id: exp.id,
+                            organizationId,
+                            categoryId: exp.categoryId,
+                            description: exp.description,
+                            amount: String(exp.amount),
+                            expenseDate: new Date(exp.date).toISOString().split('T')[0],
+                            createdAt: new Date(exp.date),
+                            updatedAt: new Date(exp.updatedAt || Date.now()),
+                            createdBy: user?.id,
+                        })
+                        syncResults.expenses.created++
+                    }
+                }
+            }
+
+            return syncResults
+        })
+
+        return c.json({ message: 'Sync successful', results })
+    } catch (error: any) {
+        console.error('Sync Push Error:', error)
+        if (error instanceof z.ZodError) {
+            return c.json({ error: 'Validation failed', details: error.errors }, 400)
+        }
+        return c.json({ error: 'Failed to push changes', message: error.message }, 500)
+    }
 })
 
 export default app

@@ -14,6 +14,9 @@ import 'placeholder_screen.dart';
 import 'projects_list_screen.dart';
 import 'project_tasks_screen.dart';
 import 'reports_screen.dart';
+import 'analysis_screen.dart';
+import '../services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -36,11 +39,10 @@ class _HomeShellState extends State<HomeShell> {
     const ExpenseListScreen(),
     const ProjectsListScreen(),
     const ProjectTasksScreen(),
-    const PlaceholderScreen(title: 'Analysis'),
+    const AnalysisScreen(),
     const ReportsScreen(),
     const SettingsScreen(),
-    const PlaceholderScreen(title: 'Advanced Billing'),
-    const SalesScreen(), // POS Terminal at index 14
+    const SalesScreen(), // POS Terminal at index 13
   ];
 
   final _titles = [
@@ -57,7 +59,6 @@ class _HomeShellState extends State<HomeShell> {
     'Project Details',
     'Reports Center',
     'Settings',
-    'Organization',
     'POS Terminal',
   ];
 
@@ -78,19 +79,24 @@ class _HomeShellState extends State<HomeShell> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            UserAccountsDrawerHeader(
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Text('D', style: TextStyle(fontSize: 28, color: Color(0xFF9C27B0), fontWeight: FontWeight.bold)),
+            Consumer<AuthService>(
+              builder: (context, auth, _) => UserAccountsDrawerHeader(
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    auth.organizationName.isNotEmpty ? auth.organizationName[0].toUpperCase() : 'S',
+                    style: const TextStyle(fontSize: 28, color: Color(0xFF2563EB), fontWeight: FontWeight.bold),
+                  ),
+                ),
+                accountName: Text(auth.organizationName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                accountEmail: Text(auth.email, style: const TextStyle(color: Colors.black54)),
+                onDetailsPressed: () {},
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                ),
+                currentAccountPictureSize: const Size.square(60),
+                arrowColor: Colors.black87,
               ),
-              accountName: const Text('Creotix Technologies', style: TextStyle(fontWeight: FontWeight.bold)),
-              accountEmail: const Text('digiticbrands@gmail.com'),
-              onDetailsPressed: () {},
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
-              ),
-              currentAccountPictureSize: const Size.square(60),
-              arrowColor: Colors.black87,
             ),
             _buildDrawerItem(0, Icons.home, Icons.home, 'Home'),
             _buildDrawerItem(1, Icons.person_outline, Icons.person, 'Customers'),
@@ -113,9 +119,8 @@ class _HomeShellState extends State<HomeShell> {
             
             _buildDrawerItem(11, Icons.bar_chart, Icons.bar_chart, 'Reports'),
             _buildDrawerItem(12, Icons.settings_outlined, Icons.settings, 'Settings'),
-            _buildDrawerItem(13, Icons.business, Icons.business, 'Advanced Billing'),
             const Divider(),
-            _buildDrawerItem(14, Icons.point_of_sale_outlined, Icons.point_of_sale, 'POS Terminal'),
+            _buildDrawerItem(13, Icons.point_of_sale_outlined, Icons.point_of_sale, 'POS Terminal'),
           ],
         ),
       ),

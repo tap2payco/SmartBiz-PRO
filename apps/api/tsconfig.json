@@ -7,6 +7,18 @@
         "allowJs": true,
         "checkJs": false,
         "outDir": "./dist",
+        "baseUrl": ".",
+        "paths": {
+            "@smartbiz/db": [
+                "../../packages/db/src/index.ts"
+            ],
+            "@smartbiz/db/*": [
+                "../../packages/db/*"
+            ],
+            "@smartbiz/shared": [
+                "../../packages/shared/src/index.ts"
+            ]
+        },
         "types": [
             "node"
         ]

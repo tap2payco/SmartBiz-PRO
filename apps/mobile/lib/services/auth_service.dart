@@ -12,12 +12,39 @@ class AuthService extends ChangeNotifier {
 
   final _supabase = Supabase.instance.client;
 
+  String _organizationName = 'SmartBiz Pro';
+  String get organizationName => _organizationName;
+
   AuthService() {
     _user = _supabase.auth.currentUser;
+    _fetchOrgInfo();
     _supabase.auth.onAuthStateChange.listen((data) {
       _user = data.session?.user;
+      if (_user != null) _fetchOrgInfo();
       notifyListeners();
     });
+  }
+
+  Future<void> _fetchOrgInfo() async {
+    if (_user == null) return;
+    try {
+      final profile = await _supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('user_id', _user!.id)
+          .single();
+      
+      final org = await _supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', profile['organization_id'])
+          .single();
+      
+      _organizationName = org['name'];
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching org info: $e');
+    }
   }
 
   Future<String?> signIn(String email, String password) async {

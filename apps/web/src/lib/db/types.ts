@@ -74,6 +74,7 @@ export interface LocalCustomer {
     taxId?: string
     creditLimit?: number
     balance: number
+    loyaltyPoints?: number
     syncedAt: number
 }
 

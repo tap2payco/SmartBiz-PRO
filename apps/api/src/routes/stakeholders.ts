@@ -3,10 +3,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { db } from '@smartbiz/db';
-import { stakeholders, sales } from '@smartbiz/db/src/schema';
+import { stakeholders, sales } from '@smartbiz/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
-const stakeholdersApp = new Hono<{ Variables: { user: any; organizationId: string } }>();
+const stakeholdersApp = new Hono<{ Variables: { user: any; profile: any; organizationId: string } }>();
 
 // Schema for creating/updating a stakeholder
 const stakeholderSchema = z.object({
@@ -167,19 +167,18 @@ stakeholdersApp.patch('/:id', zValidator('json', stakeholderSchema.partial()), a
     }
 });
 
-// DELETE /stakeholders/:id - Soft delete
-stakeholdersApp.delete('/:id', async (c) => {
+// PATCH /stakeholders/:id/loyalty - Adjust points
+stakeholdersApp.patch('/:id/loyalty', zValidator('json', z.object({ points: z.number() })), async (c) => {
     const id = c.req.param('id');
+    const { points } = c.req.valid('json');
     const organizationId = c.get('organizationId');
-    const user = c.get('user');
 
     try {
-        const [deleted] = await db
+        const [updated] = await db
             .update(stakeholders)
             .set({
-                isActive: false,
-                deletedAt: new Date(),
-                updatedBy: user.id
+                loyaltyPoints: sql`${stakeholders.loyaltyPoints} + ${points}`,
+                updatedAt: new Date(),
             })
             .where(
                 and(
@@ -189,13 +188,10 @@ stakeholdersApp.delete('/:id', async (c) => {
             )
             .returning();
 
-        if (!deleted) {
-            return c.json({ error: 'Stakeholder not found' }, 404);
-        }
-
-        return c.json({ message: 'Stakeholder deleted successfully' });
+        if (!updated) return c.json({ error: 'Stakeholder not found' }, 404);
+        return c.json({ stakeholder: updated });
     } catch (error) {
-        return c.json({ error: 'Failed to delete stakeholder' }, 500);
+        return c.json({ error: 'Failed to adjust loyalty points' }, 500);
     }
 });
 

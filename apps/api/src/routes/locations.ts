@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { db } from '@smartbiz/db'
-import { locations } from '@smartbiz/db/src/schema/inventory'
+import { locations } from '@smartbiz/db'
 import { eq, and, desc } from 'drizzle-orm'
 import { z } from 'zod'
 

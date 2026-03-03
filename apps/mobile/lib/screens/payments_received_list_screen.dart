@@ -40,25 +40,24 @@ class _PaymentsReceivedListScreenState extends State<PaymentsReceivedListScreen>
 
   @override
   Widget build(BuildContext context) {
+    Widget body;
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_payments.isEmpty) {
-      return const Center(
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_payments.isEmpty) {
+      body = const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.account_balance_wallet_outlined, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text('No payments received.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Tap + to record a payment', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
-    }
-
-    return Scaffold(
-      body: RefreshIndicator(
+    } else {
+      body = RefreshIndicator(
         onRefresh: _loadPayments,
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -67,7 +66,7 @@ class _PaymentsReceivedListScreenState extends State<PaymentsReceivedListScreen>
           itemBuilder: (context, index) {
             final payment = _payments[index];
             final date = DateTime.fromMillisecondsSinceEpoch(payment['created_at']);
-            final amount = payment['total_amount'] as double;
+            final amount = (payment['amount'] as num).toDouble();
 
             return Card(
               child: ListTile(
@@ -87,14 +86,18 @@ class _PaymentsReceivedListScreenState extends State<PaymentsReceivedListScreen>
                   DateFormat('MMM dd, yyyy').format(date),
                 ),
                 trailing: Text(
-                  NumberFormat.currency(symbol: 'KSh ').format(payment['amount']),
+                  NumberFormat.currency(symbol: 'TZS ').format(amount),
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
                 ),
               ),
             );
           },
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      body: body,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(

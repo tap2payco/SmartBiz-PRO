@@ -106,7 +106,7 @@ class _QuoteEditScreenState extends State<QuoteEditScreen> {
         children: [
           Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
           Text(
-            NumberFormat.simpleCurrency(name: 'KES').format(value),
+            NumberFormat.simpleCurrency(name: 'TZS').format(value),
             style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
           ),
         ],
@@ -165,7 +165,7 @@ class _QuoteEditScreenState extends State<QuoteEditScreen> {
             itemCount: items.length,
             itemBuilder: (_, i) => ListTile(
               title: Text(items[i]['name']),
-              subtitle: Text('KES ${items[i]['selling_price']}'),
+              subtitle: Text('TZS ${items[i]['selling_price']}'),
               onTap: () {
                 setState(() {
                   _lineItems.add({

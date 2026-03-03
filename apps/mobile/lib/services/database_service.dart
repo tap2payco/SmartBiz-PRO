@@ -15,7 +15,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE IF NOT EXISTS items (
@@ -50,6 +50,7 @@ class DatabaseService {
             phone TEXT,
             address TEXT,
             loyalty_points INTEGER DEFAULT 0,
+            is_synced INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -61,6 +62,7 @@ class DatabaseService {
             total_amount REAL DEFAULT 0,
             status TEXT DEFAULT 'COMPLETED',
             payment_type TEXT DEFAULT 'CASH',
+            is_synced INTEGER DEFAULT 0,
             created_at INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
@@ -116,6 +118,7 @@ class DatabaseService {
             date INTEGER NOT NULL,
             category_id TEXT,
             receipt_path TEXT,
+            is_synced INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0,
             FOREIGN KEY (category_id) REFERENCES expense_categories (id)
           )
@@ -137,6 +140,15 @@ class DatabaseService {
         if (oldVersion < 3) {
           await db.execute('CREATE TABLE IF NOT EXISTS expense_categories (id TEXT PRIMARY KEY, name TEXT, updated_at INTEGER)');
           await db.execute('CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, description TEXT, amount REAL, date INTEGER, category_id TEXT, receipt_path TEXT, updated_at INTEGER)');
+        }
+        if (oldVersion < 4) {
+          try {
+            await db.execute('ALTER TABLE sales ADD COLUMN is_synced INTEGER DEFAULT 0');
+            await db.execute('ALTER TABLE expenses ADD COLUMN is_synced INTEGER DEFAULT 0');
+            await db.execute('ALTER TABLE customers ADD COLUMN is_synced INTEGER DEFAULT 0');
+          } catch (e) {
+            // Column may already exist if onCreate was called recently
+          }
         }
       },
     );
@@ -259,6 +271,27 @@ class DatabaseService {
     } catch (e) {
       return false;
     }
+  }
+
+  Future<Map<String, dynamic>> getAnalysisData() async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1).millisecondsSinceEpoch;
+
+    final revenue = await db.rawQuery(
+      'SELECT SUM(total_amount) as total FROM sales WHERE created_at >= ? AND status != "QUOTATION"',
+      [startOfMonth],
+    );
+
+    final expenses = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM expenses WHERE date >= ?',
+      [startOfMonth],
+    );
+
+    return {
+      'revenue': revenue.first['total'] ?? 0.0,
+      'expenses': expenses.first['total'] ?? 0.0,
+      'profit': (revenue.first['total'] as double? ?? 0.0) - (expenses.first['total'] as double? ?? 0.0),
+    };
   }
 
   Future<List<Map<String, dynamic>>> query(String table, {String? where, List<Object?>? whereArgs, String? orderBy}) async {

@@ -46,7 +46,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
-              decoration: const InputDecoration(labelText: 'Amount Received (KES)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Amount Received (TZS)', border: OutlineInputBorder()),
               keyboardType: TextInputType.number,
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Required';
@@ -83,7 +83,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
       ),
       child: Text(_selectedInvoice == null 
         ? 'Tap to select an invoice' 
-        : 'INV-${_selectedInvoice!['id'].toString().substring(0, 8).toUpperCase()} - ${NumberFormat.simpleCurrency(name: 'KES').format(_selectedInvoice!['total_amount'])}'),
+        : 'INV-${_selectedInvoice!['id'].toString().substring(0, 8).toUpperCase()} - ${NumberFormat.simpleCurrency(name: 'TZS').format(_selectedInvoice!['total_amount'])}'),
     );
   }
 
@@ -127,7 +127,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
         itemCount: invoices.length,
         itemBuilder: (_, i) => ListTile(
           title: Text('Invoice #INV-${invoices[i]['id'].toString().substring(0, 8).toUpperCase()}'),
-          subtitle: Text('Balance: KES ${invoices[i]['total_amount']}'),
+          subtitle: Text('Balance: TZS ${invoices[i]['total_amount']}'),
           onTap: () {
             setState(() => _selectedInvoice = invoices[i]);
             _amountController.text = invoices[i]['total_amount'].toString();

@@ -1,0 +1,108 @@
+# Phase 1.1 — Structural Hardening Plan (Revised per Strategic Review)
+
+## 1. Database Schema Hardening
+
+#### [MODIFY] [database.service.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/database/database.service.ts)
+
+Apply the following auto-migrations to clean and enforce the schema:
+
+**Users Table (Identity)**
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+-- Add trigger for real updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+```
+
+**Businesses Table (1:1 Enforcement)**
+```sql
+ALTER TABLE businesses ADD CONSTRAINT unique_user_business UNIQUE (user_id);
+```
+*(Backend logic will auto-create 1 default business per user registration).*
+
+**Transactions Table (Minimalist)**
+```diff
+KEEP: id, user_id, amount, type, category_id, transaction_date, created_at
+ADD:  business_id UUID REFERENCES businesses(id)
+ADD:  description VARCHAR(255)
+ADD:  updated_at TIMESTAMP DEFAULT NOW()
+ADD:  deleted_at TIMESTAMP NULL
+DROP: source, category, note
+DROP: status, provider_reference, idempotency_key, payment_method (Unused/Premature)
+```
+*(Will also add the `updated_at` trigger to transactions).*
+
+**Categories Table**
+```sql
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE;
+```
+*(Seed all 10 system categories with `is_system = true`, see previous plan for list).*
+
+**Indexes**
+```sql
+CREATE INDEX IF NOT EXISTS idx_categories_is_system ON categories(is_system);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, transaction_date DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_business_date ON transactions(business_id, transaction_date DESC);
+```
+
+---
+
+## 2. Backend Logic & Validation
+
+#### [MODIFY] [auth.service.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/auth/auth.service.ts)
+- **Auto-create Business:** During OTP verification (if new user), automatically create an entry in `businesses` with `user_id` and name like "My Business".
+
+#### [MODIFY] [transactions.service.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/transactions/transactions.service.ts)
+- **Soft Delete Enforcement:** Add `WHERE deleted_at IS NULL` to ALL queries.
+- **Minimal Schema:** Update [create](file:///c:/Users/psbon/Telecombank%20App/backend/src/users/users.service.ts#26-33) and [getHistory](file:///c:/Users/psbon/Telecombank%20App/backend/src/transactions/transactions.controller.ts#19-30) SQL queries to remove `payment_method`, `status`, `note`, and use `description` and `business_id` instead.
+- **Data Validation:** 
+  - Fail if transaction > 5 years old.
+  - Fail if `transaction.type` != `category.type`.
+
+#### [MODIFY] [create-transaction.dto.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/transactions/dto/create-transaction.dto.ts)
+- Enforce strict validation via class-validator: max description length, valid amounts.
+
+---
+
+## 3. Flutter Adjustments
+
+#### [MODIFY] [add_transaction_screen.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/features/transactions/add_transaction_screen.dart)
+- Remove `payment_method` toggle (since it's dropped from DB).
+- Rename Note -> Description natively.
+
+#### [MODIFY] [transaction_repository.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/data/repositories/transaction_repository.dart)
+#### [MODIFY] [transaction.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/data/models/transaction.dart)
+- Remove unused fields from model.
+
+#### [NEW] [error_interceptor.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/core/error_interceptor.dart)
+- Catch 401 -> Force Logout
+- Catch 403 -> Permission Error Dialog
+- Catch 500 -> "We're fixing something. Try again."
+- Catch timeouts -> "No internet connection"
+
+---
+
+## 4. Admin Panel Verification
+
+#### [MODIFY] [admin.service.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/admin/admin.service.ts)
+- Ensure `deleted_at IS NULL` is respected in all aggregation metrics (Users, total transactions, category breakdown).
+- Verify JWT role protection.
+
+---
+
+## Execution Constraints
+- Do not write new features. Only execute structural cleanup.
+- Soft delete everywhere. No hard deletes.
+- Single source of truth for all relationships.

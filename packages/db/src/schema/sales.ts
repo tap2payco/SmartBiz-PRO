@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, integer, varchar, decimal, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, integer, varchar, decimal, pgEnum, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { organizations } from './auth';
 import { items } from './inventory';
@@ -31,6 +31,12 @@ export const sales = pgTable('sales', {
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
     createdBy: uuid('created_by'),
+}, (table) => {
+    return {
+        orgIdx: index('sales_org_idx').on(table.organizationId),
+        customerIdx: index('sales_customer_idx').on(table.customerId),
+        createdAtIdx: index('sales_created_at_idx').on(table.createdAt),
+    };
 });
 
 // Sale Items table
@@ -46,6 +52,11 @@ export const saleItems = pgTable('sale_items', {
     total: decimal('total', { precision: 15, scale: 2 }).notNull(),
 
     createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => {
+    return {
+        saleIdx: index('sale_items_sale_idx').on(table.saleId),
+        itemIdx: index('sale_items_item_idx').on(table.itemId),
+    };
 });
 
 // Payments table
@@ -62,6 +73,11 @@ export const payments = pgTable('payments', {
     paymentDate: timestamp('payment_date').notNull().defaultNow(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     createdBy: uuid('created_by'),
+}, (table) => {
+    return {
+        orgIdx: index('payments_org_idx').on(table.organizationId),
+        saleIdx: index('payments_sale_idx').on(table.saleId),
+    };
 });
 
 // Relations

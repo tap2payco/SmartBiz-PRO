@@ -1,0 +1,126 @@
+# Phase 1.2 — Security Architecture Hardening: Final Report
+
+**Date Completed:** March 2, 2026  
+**Objective:** Harden authentication security from ~78% → ~88% production readiness  
+**Result:** ✅ All backend + Flutter client steps implemented, compiled, deployed.
+
+---
+
+## Security Flow (After Phase 1.2)
+
+```mermaid
+sequenceDiagram
+    participant App as Flutter App
+    participant API as NestJS Backend
+    participant DB as Supabase
+
+    App->>App: Generate device_id (stored in SecureStorage)
+    App->>API: POST /auth/request-otp {phone, device_id}
+    API->>API: Check 60s cooldown + 3/10min limit
+    API->>DB: Store OTP request
+    API-->>App: OTP sent
+
+    App->>API: POST /auth/verify-otp {phone, pin, device_id}
+    API->>API: Check 5-attempt cap
+    API->>DB: Verify device session
+    Note over API,DB: If new device → increment session_version<br/>Old device tokens become invalid
+    API->>DB: Delete old refresh tokens, store new hash
+    API-->>App: {access_token (device_id+sv), refresh_token}
+
+    App->>API: GET /summary/month (Bearer token)
+    API->>DB: Validate token.device_id == user.active_device_id<br/>AND token.sv == user.session_version
+    alt Match
+        API-->>App: Dashboard data
+    else Mismatch
+        API-->>App: 401 SESSION_REVOKED
+        App->>App: Clear tokens, redirect to login
+    end
+```
+
+---
+
+## Backend Changes (7 files, 242 insertions)
+
+### Database Schema (Auto-Migration)
+
+| Table | Column/Object | Purpose |
+|-------|--------------|---------|
+| `users` | `active_device_id TEXT` | Currently authorized device |
+| `users` | `session_version INT` | Increments on new-device login, invalidates old JWTs |
+| `users` | `last_login_at TIMESTAMP` | Audit trail |
+| `refresh_tokens` | New table (id, user_id, token_hash, created_at) | Stores SHA-256 hashed refresh tokens |
+| `otp_requests` | `attempts INT` | Failed verification counter |
+| `otp_requests` | `blocked_until TIMESTAMP` | Auto-block after 5 failed attempts |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| [database.service.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/database/database.service.ts) | Phase 1.2 migration SQL added |
+| [auth.dto.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/auth/dto/auth.dto.ts) | `device_id` required on `RequestOtpDto` + `VerifyOtpDto` |
+| [auth.controller.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/auth/auth.controller.ts) | Passes `device_id` to service methods |
+| [users.service.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/users/users.service.ts) | Fetches `active_device_id` + `session_version`; new `updateSession()` |
+| [auth.service.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/auth/auth.service.ts) | Session enforcement, refresh rotation (SHA-256), OTP abuse controls |
+| [jwt.middleware.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/common/middleware/jwt.middleware.ts) | Real-time `device_id` + `sv` validation on every request |
+| [app.module.ts](file:///c:/Users/psbon/Telecombank%20App/backend/src/app.module.ts) | Route-specific Throttler: auth=5/min, general=60/min |
+
+### OTP Abuse Controls
+
+| Protection | Rule |
+|------------|------|
+| Cooldown | 60 seconds between OTP requests |
+| Rate limit | Max 3 OTP requests per 10 minutes |
+| Brute force | Max 5 wrong PIN attempts → 30-min block |
+
+### Audit Logging
+
+Events logged: `NEW_DEVICE_LOGIN`, `SESSION_REVOKED`, `OTP_RATE_LIMITED`, `OTP_VERIFY_FAILED_LIMIT`
+
+---
+
+## Flutter Client Changes (4 files, 51 insertions)
+
+| File | Changes |
+|------|---------|
+| [device_service.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/data/services/device_service.dart) | **[NEW]** Generates persistent UUID, stored in FlutterSecureStorage |
+| [auth_repository.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/data/repositories/auth_repository.dart) | Injects `device_id` into `requestOtp` + `verifyOtp` payloads |
+| [providers.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/core/providers.dart) | Wired `DeviceService` provider into `AuthRepository` |
+| [api_service.dart](file:///c:/Users/psbon/Telecombank%20App/telecombank_app/lib/data/services/api_service.dart) | Detects `SESSION_REVOKED` → shows "Logged in on another device" message |
+
+---
+
+## Git Commits
+
+| Hash | Message |
+|------|---------|
+| `85b045c` | `feat(security): phase 1.2 — device session enforcement, refresh rotation, OTP abuse controls` |
+| `6771d31` | `feat(flutter): phase 1.2 client — device_id generation, session revoked handling` |
+
+---
+
+## APK Build
+
+| ABI | Size | Status |
+|-----|------|--------|
+| ARMv7 | 16.5 MB | ✅ Built |
+| ARM64 | 18.8 MB | ✅ Built |
+| x86_64 | 20.2 MB | ✅ Built |
+
+---
+
+## Definition of Done Checklist
+
+| Test | Expected Result | Status |
+|------|----------------|--------|
+| Login Device A | ✅ Access granted | ✅ Implemented |
+| Login Device B | ✅ Access granted, session_version incremented | ✅ Implemented |
+| Device A next request | ❌ 401 SESSION_REVOKED | ✅ Implemented |
+| Refresh token once | ✅ New pair issued | ✅ Implemented |
+| Reuse old refresh token | ❌ Rejected + all tokens nuked | ✅ Implemented |
+| OTP spam (>3 in 10min) | ❌ Blocked | ✅ Implemented |
+| Wrong PIN 5 times | ❌ Blocked 30 min | ✅ Implemented |
+| OTP cooldown (<60s) | ❌ Blocked | ✅ Implemented |
+
+---
+
+> **Next:** Phase 1.3 — Data Integrity & Financial Accuracy (Owner Withdrawal Separation)

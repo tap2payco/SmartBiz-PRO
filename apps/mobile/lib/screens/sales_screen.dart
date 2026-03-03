@@ -17,6 +17,7 @@ class _SalesScreenState extends State<SalesScreen> {
   final List<Map<String, dynamic>> _cart = [];
   String _search = '';
   bool _isQuotation = false;
+  String _paymentMethod = 'CASH';
   Map<String, dynamic>? _selectedCustomer;
   final _currencyFormat = NumberFormat('#,##0', 'en');
 
@@ -84,7 +85,7 @@ class _SalesScreenState extends State<SalesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Confirm $type?'),
-        content: Text('Customer: $customerName\nTotal: KES ${_currencyFormat.format(_total)}'),
+        content: Text('Customer: $customerName\nTotal: TZS ${_currencyFormat.format(_total)}'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirm')),
@@ -103,7 +104,7 @@ class _SalesScreenState extends State<SalesScreen> {
         'customer_name': customerName,
         'total_amount': _total,
         'status': _isQuotation ? 'QUOTATION' : 'COMPLETED',
-        'payment_type': 'CASH', 
+        'payment_type': _isQuotation ? 'N/A' : _paymentMethod,
         'created_at': DateTime.now().millisecondsSinceEpoch,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       };
@@ -114,6 +115,7 @@ class _SalesScreenState extends State<SalesScreen> {
         setState(() {
           _cart.clear();
           _isQuotation = false;
+          _paymentMethod = 'CASH';
           _selectedCustomer = null;
         });
 
@@ -245,7 +247,7 @@ class _SalesScreenState extends State<SalesScreen> {
                         child: ListTile(
                           title: Text(item['name'] as String,
                               style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text('KES ${_currencyFormat.format(item['selling_price'])}',
+                          subtitle: Text('TZS ${_currencyFormat.format(item['selling_price'])}',
                               style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
                           trailing: IconButton(
                             icon: const Icon(Icons.add_circle, color: Color(0xFF2563EB), size: 32),
@@ -294,6 +296,32 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
           const SizedBox(height: 8),
 
+          // Payment method selector (hidden for quotations)
+          if (!_isQuotation)
+            Row(
+              children: [
+                Text('Pay via:', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'CASH', label: Text('Cash', style: TextStyle(fontSize: 11))),
+                      ButtonSegment(value: 'M-PESA', label: Text('M-Pesa', style: TextStyle(fontSize: 11))),
+                      ButtonSegment(value: 'BANK', label: Text('Bank', style: TextStyle(fontSize: 11))),
+                      ButtonSegment(value: 'CARD', label: Text('Card', style: TextStyle(fontSize: 11))),
+                    ],
+                    selected: {_paymentMethod},
+                    onSelectionChanged: (v) => setState(() => _paymentMethod = v.first),
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 8),
+
           // Total + Checkout
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -301,7 +329,7 @@ class _SalesScreenState extends State<SalesScreen> {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Total (${_cart.length} items)',
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-                Text('KES ${_currencyFormat.format(_total)}',
+                Text('TZS ${_currencyFormat.format(_total)}',
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               ]),
               SizedBox(

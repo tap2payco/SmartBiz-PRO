@@ -187,6 +187,16 @@ app.use('/projects', authMiddleware);
 app.use('/projects/*', authMiddleware);
 app.route('/projects', projects);
 
+import hr from './routes/hr';
+app.use('/hr', authMiddleware);
+app.use('/hr/*', authMiddleware);
+app.route('/hr', hr);
+
+import payroll from './routes/payroll';
+app.use('/payroll', authMiddleware);
+app.use('/payroll/*', authMiddleware);
+app.route('/payroll', payroll);
+
 app.route('/transfers', transfers);
 
 import sync from './routes/sync';

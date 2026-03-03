@@ -280,8 +280,10 @@ export default function ProjectsPage() {
                                         {project.endDate ? format(new Date(project.endDate), 'MMM dd, yyyy') : '-'}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon">
-                                            <ExternalLink className="h-4 w-4" />
+                                        <Button variant="ghost" size="icon" asChild>
+                                            <a href={`/dashboard/projects/${project.id}`}>
+                                                <ExternalLink className="h-4 w-4" />
+                                            </a>
                                         </Button>
                                     </TableCell>
                                 </TableRow>

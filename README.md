@@ -1,169 +1,49 @@
-# SmartBiz Pro ERP
+# SmartBiz PRO - Industrial-Level ERP
 
-**Modern, Offline-First ERP for Retail & Wholesale Businesses**
+SmartBiz PRO is a comprehensive, offline-first ERP solution designed for Retail and Wholesale businesses. It features a robust multi-tenant architecture, real-time sync capabilities, and advanced business intelligence modules.
 
-## 🚀 Quick Start
+## 🚀 Key Modules
+
+- **POS (Point of Sale)**: Fast, offline-first checkout with barcode support and split payments.
+- **Inventory Management**: Event-sourced stock tracking with locations, categories, and automated reorder alerts.
+- **Project Management**: Industrial-level task board with employee assignments and progress tracking.
+- **Retail Loyalty**: Automated customer reward points system (1% back on sales).
+- **Advanced Analytics**: Interactive dashboards for sales trends and inventory turnover.
+- **HR & Payroll**: Employee management with automated payroll generation.
+- **Finance**: Multi-currency support, bank reconciliation, and automated P&L reporting.
+
+## 🏗️ Architecture
+
+- **Monorepo**: Powered by [Turborepo](https://turbo.build/).
+- **Frontend**: [Next.js](https://nextjs.org/) with [Tailwind CSS](https://tailwindcss.com/) and [Shadcn UI](https://ui.shadcn.com/).
+- **Backend**: [Hono](https://hono.dev/) on Edge Runtime.
+- **Database**: [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/).
+- **Local DB**: [Dexie.js](https://dexie.org/) for offline-first experience.
+- **Cloud**: [Supabase](https://supabase.com/) for Auth and Real-time data.
+
+## 🛠️ Development
 
 ### Prerequisites
+- Node.js 20+
+- PNPM or NPM
 
-- **Node.js** >= 18.0.0
-- **npm** >= 10.0.0
-- **Supabase CLI** ([Installation Guide](./SUPABASE_CLI_INSTALL.md))
+### Setup
+1. Clone the repository.
+2. Install dependencies: `npm install`
+3. Set up environment variables in `.env.local`.
+4. Run migrations: `npm run db:generate && npm run db:migrate`
+5. Start development server: `npm run dev`
 
-### Installation
+### Project Structure
+- `apps/api`: Hono API (Backend)
+- `apps/web`: Next.js Dashboard (Frontend)
+- `packages/db`: Drizzle Schema and Migrations
+- `packages/shared`: Shared Types and Utilities
 
-```bash
-# Install dependencies
-npm install
+## 🛡️ Security & Performance
+- **Organization Scoping**: Strict multi-tenant isolation at the database and API levels.
+- **Database Indexing**: Optimized for high-volume transactions.
+- **Offline Sync**: Robust conflict-resolution for mobile and web apps.
 
-# Initialize Supabase (if not already done)
-supabase init
-supabase start
-
-# Run database migrations
-npm run db:migrate
-
-# Start development servers
-npm run dev
-```
-
-## 📁 Project Structure
-
-```
-SmartBiz PRO/
-├── apps/
-│   ├── web/              # Next.js PWA (Frontend)
-│   ├── api/              # Node + Hono API (Backend)
-│   └── worker/           # Background jobs (future)
-├── packages/
-│   ├── ui/               # Shared UI components (shadcn/ui)
-│   ├── db/               # Drizzle ORM schema & migrations
-│   ├── shared/           # Shared types, schemas, utils
-│   ├── sync/             # Offline sync protocol
-│   └── config/           # Shared configs (ESLint, TypeScript)
-├── supabase/             # Supabase migrations & config
-└── docs/                 # Documentation
-```
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **Next.js 14** (App Router)
-- **React 18**
-- **Tailwind CSS** + **shadcn/ui**
-- **React Query** (server state)
-- **Zustand** (UI state)
-- **Dexie.js** (IndexedDB for offline)
-
-### Backend
-- **Node.js** runtime
-- **Hono** framework
-- **Drizzle ORM**
-- **Zod** validation
-- **Supabase** (Postgres + Auth + Storage)
-
-## 📝 Available Scripts
-
-```bash
-# Development
-npm run dev                  # Start all apps in development mode
-npm run dev:web              # Start web app only
-npm run dev:api              # Start API only
-
-# Build
-npm run build                # Build all apps
-npm run build:web            # Build web app only
-npm run build:api            # Build API only
-
-# Database
-npm run db:generate          # Generate Drizzle schema
-npm run db:migrate           # Run migrations
-npm run db:studio            # Open Drizzle Studio
-
-# Testing
-npm run test                 # Run all tests
-npm run test:unit            # Run unit tests
-npm run test:integration     # Run integration tests
-npm run test:e2e             # Run E2E tests
-
-# Code Quality
-npm run lint                 # Lint all packages
-npm run format               # Format code with Prettier
-npm run type-check           # TypeScript type checking
-```
-
-## 🌐 Development URLs
-
-After running `supabase start` and `npm run dev`:
-
-- **Web App**: http://localhost:3000
-- **API**: http://localhost:3001
-- **Supabase Studio**: http://localhost:54323
-- **Supabase API**: http://localhost:54321
-
-## 📚 Documentation
-
-- [Implementation Plan](./brain/implementation_plan.md)
-- [Task Breakdown](./brain/task.md)
-- [Project Details](./projectt%20details%20file/project%20dtails.md)
-- [Funding Proposal](./projectt%20details%20file/SmartBiz_Pro_Funding_Proposal.md)
-
-## 🎯 Core Features
-
-- ✅ **Offline-First**: Complete POS and inventory operations work without internet
-- ✅ **Smart Sync**: Automatic conflict resolution with manual review for critical data
-- ✅ **Multi-Tenant**: Secure organization isolation with Row Level Security
-- ✅ **Real-Time**: Live updates across devices
-- ✅ **Modular**: Enable only the modules you need
-- ✅ **Compliant**: Tanzania VAT/PAYE ready
-
-## 🏗️ Development Phases
-
-### Phase 1: Foundation (Weeks 1-8) - IN PROGRESS
-- [x] Project setup & monorepo
-- [ ] Authentication & RBAC
-- [ ] Offline infrastructure
-- [ ] Shared packages
-
-### Phase 2: Core Retail (Weeks 9-20)
-- [ ] Stakeholder management
-- [ ] Inventory management
-- [ ] Point of Sale (POS)
-- [ ] Purchase management
-- [ ] Financial management
-
-### Phase 3: Advanced Features (Weeks 21-32)
-- [ ] Budget management
-- [ ] Reporting & analytics
-- [ ] Conflict resolution UI
-
-### Phase 4: Retail Enhancements (Weeks 33-40)
-- [ ] Loyalty & promotions
-- [ ] Multi-store support
-- [ ] Hardware integration
-
-## 🤝 Contributing
-
-This is a private project. For team members:
-
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Commit changes: `git commit -m 'Add some feature'`
-3. Push to branch: `git push origin feature/your-feature`
-4. Create a Pull Request
-
-## 📄 License
-
-Proprietary - All rights reserved
-
-## 👥 Team
-
-- **Project Manager**: TBD
-- **Tech Lead**: TBD
-- **Frontend Developers**: TBD
-- **Backend Developers**: TBD
-- **DevOps Engineer**: TBD
-- **QA Engineer**: TBD
-
----
-
-**Built with ❤️ for Retail & Wholesale Businesses**
+## 📜 License
+Industrial Grade - Tap2Pay Co.

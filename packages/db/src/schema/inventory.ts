@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, decimal, integer, boolean, timestamp, pgEnum } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, decimal, integer, boolean, timestamp, pgEnum, index } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { organizations } from './auth'
 
@@ -51,6 +51,12 @@ export const items = pgTable('items', {
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => {
+    return {
+        orgIdx: index('items_org_idx').on(table.organizationId),
+        categoryIdx: index('items_category_idx').on(table.categoryId),
+        skuIdx: index('items_sku_idx').on(table.sku),
+    };
 })
 
 // Locations Table
@@ -77,6 +83,12 @@ export const stockMovements = pgTable('stock_movements', {
     notes: text('notes'),
     createdBy: uuid('created_by'), // User who created the movement
     createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => {
+    return {
+        orgIdx: index('stock_movements_org_idx').on(table.organizationId),
+        itemIdx: index('stock_movements_item_idx').on(table.itemId),
+        locationIdx: index('stock_movements_location_idx').on(table.locationId),
+    };
 })
 
 // Relations

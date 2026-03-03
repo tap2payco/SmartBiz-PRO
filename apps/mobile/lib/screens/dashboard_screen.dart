@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/sync_service.dart';
+import '../services/connectivity_service.dart';
 import 'sales_screen.dart';
 import 'scanner_screen.dart';
 import 'add_product_screen.dart';
@@ -31,6 +32,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadStats();
+    // Auto-sync on dashboard load if online
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final conn = context.read<ConnectivityService>();
+      if (conn.isOnline) conn.autoSync().then((_) => _loadStats());
+    });
   }
 
   Future<void> _loadStats() async {
@@ -86,12 +92,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final syncService = SyncService(db);
-    final success = await syncService.pullData(token);
+    
+    // Perform bilateral sync
+    final pushSuccess = await syncService.pushData(token);
+    final pullSuccess = await syncService.pullData(token);
+    final success = pushSuccess && pullSuccess;
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? '✅ Data synced successfully' : '❌ Sync failed'),
+          content: Text(success 
+            ? '✅ Complete sync successful' 
+            : (!pushSuccess ? '❌ Push failed' : '❌ Pull failed')),
           backgroundColor: success ? Colors.green.shade600 : Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -152,7 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       childAspectRatio: 1.4,
       children: [
         _buildStatCard("Today's Revenue",
-            'KES ${NumberFormat("#,##0").format(_todayRevenue)}',
+            'TZS ${NumberFormat("#,##0").format(_todayRevenue)}',
             Icons.payments_outlined, Colors.green),
         _buildStatCard('Total Orders', _orderCount.toString(),
             Icons.shopping_basket_outlined, const Color(0xFF2563EB)),
@@ -256,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildActionChip('New Sale', Icons.point_of_sale, const Color(0xFF2563EB), 14),
+              _buildActionChip('New Sale', Icons.point_of_sale, const Color(0xFF2563EB), 13),
               const SizedBox(width: 12),
               _buildActionChip('Scan Item', Icons.qr_code_scanner, Colors.teal, -1),
               const SizedBox(width: 12),
@@ -321,24 +333,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildSyncCard() {
+    final conn = context.watch<ConnectivityService>();
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: conn.isOnline ? Colors.green.shade200 : Colors.grey.shade200),
       ),
-      child: ListTile(
-        onTap: _syncing ? null : _handleSync,
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue.shade50,
-          child: Icon(Icons.sync, color: Colors.blue.shade700),
-        ),
-        title: const Text('Synchronize Cloud Data', style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(_syncing ? 'Sync in progress...' : 'Tap to sync with server'),
-        trailing: _syncing
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-            : const Icon(Icons.chevron_right),
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: conn.isOnline ? Colors.green.shade50 : Colors.grey.shade100,
+              child: Icon(
+                conn.isOnline ? Icons.cloud_done : Icons.cloud_off,
+                color: conn.isOnline ? Colors.green.shade700 : Colors.grey.shade500,
+              ),
+            ),
+            title: Text(
+              conn.isOnline ? 'Online' : 'Offline',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: conn.isOnline ? Colors.green.shade700 : Colors.grey.shade700,
+              ),
+            ),
+            subtitle: Text(
+              conn.isSyncing
+                ? 'Sync in progress...'
+                : conn.isOnline
+                  ? 'Data syncs automatically'
+                  : 'Changes saved locally',
+            ),
+            trailing: conn.isSyncing
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : conn.isOnline
+                ? IconButton(
+                    icon: const Icon(Icons.sync),
+                    onPressed: _syncing ? null : _handleSync,
+                    tooltip: 'Manual sync',
+                  )
+                : const Icon(Icons.chevron_right, color: Colors.grey),
+          ),
+        ],
       ),
     );
   }

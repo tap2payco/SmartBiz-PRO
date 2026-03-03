@@ -5,7 +5,13 @@ import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 
-const app = new Hono();
+type Variables = {
+    user: any;
+    profile: any;
+    organizationId: string;
+};
+
+const app = new Hono<{ Variables: Variables }>();
 
 const createProjectSchema = z.object({
     name: z.string().min(2).max(255),
@@ -20,6 +26,7 @@ const createTaskSchema = z.object({
     description: z.string().optional(),
     status: z.string().default('PENDING'),
     dueDate: z.string().optional(),
+    assignedTo: z.string().uuid().optional(),
 });
 
 // List Projects
@@ -30,7 +37,11 @@ app.get('/', async (c) => {
     const result = await db.query.projects.findMany({
         where: eq(projects.organizationId, orgId),
         with: {
-            tasks: true
+            tasks: {
+                with: {
+                    assignee: true
+                }
+            }
         },
         orderBy: (projects, { desc }) => [desc(projects.updatedAt)],
     });
@@ -64,7 +75,11 @@ app.get('/:id', async (c) => {
     const project = await db.query.projects.findFirst({
         where: and(eq(projects.id, id), eq(projects.organizationId, orgId)),
         with: {
-            tasks: true
+            tasks: {
+                with: {
+                    assignee: true
+                }
+            }
         }
     });
 
@@ -83,7 +98,7 @@ app.post('/:id/tasks', zValidator('json', createTaskSchema), async (c) => {
         where: and(eq(projects.id, projectId), eq(projects.organizationId, orgId)),
     });
 
-    if (!project) return c.json({ error: 'Project not found or unauthorized' }, 404);
+    if (!project) return c.json({ error: 'Project not found' }, 404);
 
     const data = c.req.valid('json');
     const [newTask] = await db.insert(projectTasks).values({
@@ -93,6 +108,58 @@ app.post('/:id/tasks', zValidator('json', createTaskSchema), async (c) => {
     } as any).returning();
 
     return c.json({ task: newTask }, 201);
+});
+
+// Update Task
+app.patch('/tasks/:taskId', zValidator('json', createTaskSchema.partial()), async (c) => {
+    const orgId = c.get('organizationId');
+    const taskId = c.req.param('taskId');
+    if (!orgId) return c.json({ error: 'Unauthorized' }, 401);
+
+    // Verify task belongs to organization
+    const task = await db.query.projectTasks.findFirst({
+        where: eq(projectTasks.id, taskId),
+        with: {
+            project: true
+        }
+    });
+
+    if (!task || task.project.organizationId !== orgId) {
+        return c.json({ error: 'Task not found' }, 404);
+    }
+
+    const data = c.req.valid('json');
+    const [updated] = await db.update(projectTasks)
+        .set({
+            ...data,
+            dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+            updatedAt: new Date()
+        })
+        .where(eq(projectTasks.id, taskId))
+        .returning();
+
+    return c.json({ task: updated });
+});
+
+// Delete Task
+app.delete('/tasks/:taskId', async (c) => {
+    const orgId = c.get('organizationId');
+    const taskId = c.req.param('taskId');
+    if (!orgId) return c.json({ error: 'Unauthorized' }, 401);
+
+    const task = await db.query.projectTasks.findFirst({
+        where: eq(projectTasks.id, taskId),
+        with: {
+            project: true
+        }
+    });
+
+    if (!task || task.project.organizationId !== orgId) {
+        return c.json({ error: 'Task not found' }, 404);
+    }
+
+    await db.delete(projectTasks).where(eq(projectTasks.id, taskId));
+    return c.json({ success: true });
 });
 
 export default app;

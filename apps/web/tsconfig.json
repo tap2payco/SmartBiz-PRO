@@ -25,6 +25,12 @@
         "paths": {
             "@/*": [
                 "./src/*"
+            ],
+            "@smartbiz/shared": [
+                "../../packages/shared/src/index.ts"
+            ],
+            "@smartbiz/db": [
+                "../../packages/db/src/index.ts"
             ]
         }
     },

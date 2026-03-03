@@ -4,7 +4,13 @@
     "private": true,
     "main": "./src/index.ts",
     "types": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./src/schema/*": "./src/schema/*.ts",
+        "./src/schema": "./src/schema/index.ts"
+    },
     "scripts": {
+        "build": "tsc",
         "generate": "drizzle-kit generate",
         "migrate": "drizzle-kit migrate",
         "push": "drizzle-kit push",

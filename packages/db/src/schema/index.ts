@@ -9,4 +9,5 @@ export * from './banking';
 export * from './returns';
 export * from './quotations';
 export * from './projects';
-
+export * from './hr';
+export * from './payroll';

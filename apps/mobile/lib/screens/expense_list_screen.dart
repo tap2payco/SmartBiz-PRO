@@ -33,25 +33,24 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Widget body;
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_expenses.isEmpty) {
-      return const Center(
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_expenses.isEmpty) {
+      body = const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.money_off, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text('No expenses recorded.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Tap + to add your first expense', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
-    }
-
-    return Scaffold(
-      body: RefreshIndicator(
+    } else {
+      body = RefreshIndicator(
         onRefresh: _loadExpenses,
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -59,8 +58,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final expense = _expenses[index];
-            final date = DateTime.fromMillisecondsSinceEpoch(expense['created_at']);
-            final amount = expense['total_amount'] as double;
+            final date = DateTime.fromMillisecondsSinceEpoch(expense['date'] ?? expense['created_at'] ?? 0);
+            final amount = (expense['amount'] as num).toDouble();
 
             return Card(
               child: ListTile(
@@ -73,21 +72,25 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                   child: const Icon(Icons.receipt, color: Colors.red),
                 ),
                 title: Text(
-                  expense['name'] ?? 'General Expense',
+                  expense['description'] ?? 'General Expense',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
                   DateFormat('MMM dd, yyyy').format(date),
                 ),
                 trailing: Text(
-                  NumberFormat.currency(symbol: 'KSh ').format(amount),
+                  NumberFormat.currency(symbol: 'TZS ').format(amount),
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
                 ),
               ),
             );
           },
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      body: body,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(

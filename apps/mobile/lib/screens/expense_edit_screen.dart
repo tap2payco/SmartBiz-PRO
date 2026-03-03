@@ -105,7 +105,7 @@ class _ExpenseEditScreenState extends State<ExpenseEditScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
-              decoration: const InputDecoration(labelText: 'Amount (KES)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Amount (TZS)', border: OutlineInputBorder()),
               keyboardType: TextInputType.number,
               validator: (v) => v == null || v.isEmpty ? 'Required' : null,
             ),

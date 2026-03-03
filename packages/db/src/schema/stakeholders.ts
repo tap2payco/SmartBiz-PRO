@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, integer, jsonb, varchar, decimal, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, integer, jsonb, varchar, decimal, pgEnum, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { organizations } from './auth';
 
@@ -24,6 +24,7 @@ export const stakeholders = pgTable('stakeholders', {
     taxId: varchar('tax_id', { length: 50 }),
     creditLimit: decimal('credit_limit', { precision: 15, scale: 2 }),
     paymentTerms: integer('payment_terms'), // days
+    loyaltyPoints: decimal('loyalty_points', { precision: 15, scale: 2 }).default('0'),
     isActive: boolean('is_active').notNull().default(true),
     customFields: jsonb('custom_fields'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -32,6 +33,12 @@ export const stakeholders = pgTable('stakeholders', {
     updatedBy: uuid('updated_by').notNull(),
     deletedAt: timestamp('deleted_at'),
     version: integer('version').notNull().default(1),
+}, (table) => {
+    return {
+        orgIdx: index('stakeholders_org_idx').on(table.organizationId),
+        typeIdx: index('stakeholders_type_idx').on(table.type),
+        codeIdx: index('stakeholders_code_idx').on(table.code),
+    };
 });
 
 // Stakeholder contacts
@@ -57,6 +64,11 @@ export const stakeholderInteractions = pgTable('stakeholder_interactions', {
     interactionDate: timestamp('interaction_date').notNull().defaultNow(),
     createdBy: uuid('created_by').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => {
+    return {
+        stakeholderIdx: index('stakeholder_interactions_stakeholder_idx').on(table.stakeholderId),
+        typeIdx: index('stakeholder_interactions_type_idx').on(table.type),
+    };
 });
 
 // Relations

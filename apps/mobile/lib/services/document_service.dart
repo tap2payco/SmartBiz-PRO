@@ -67,7 +67,7 @@ class DocumentService {
                 headerDecoration: const pw.BoxDecoration(color: PdfColors.blue600),
                 headers: ['Description', 'Qty', 'Unit Price', 'Total'],
                 data: [
-                  ['Business Transaction', '1', 'KSh ${sale['total_amount']}', 'KSh ${sale['total_amount']}'],
+                  ['Business Transaction', '1', 'TZS ${sale['total_amount']}', 'TZS ${sale['total_amount']}'],
                 ],
               ),
               pw.SizedBox(height: 20),
@@ -78,7 +78,7 @@ class DocumentService {
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text('Total Amount:', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                      pw.Text('KSh ${sale['total_amount']}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue600)),
+                      pw.Text('TZS ${sale['total_amount']}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue600)),
                     ],
                   ),
                 ],
@@ -144,7 +144,7 @@ class DocumentService {
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Text('Amount Received:'),
-                        pw.Text('KSh ${payment['amount']}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+                        pw.Text('TZS ${payment['amount']}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
                       ],
                     ),
                     pw.Divider(),

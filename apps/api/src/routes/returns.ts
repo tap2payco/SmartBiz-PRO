@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db } from '@smartbiz/db'
-import { returns, returnItems } from '@smartbiz/db/src/schema/returns'
-import { sales, saleItems } from '@smartbiz/db/src/schema/sales'
-import { items, stockMovements } from '@smartbiz/db/src/schema/inventory'
+import { returns, returnItems } from '@smartbiz/db'
+import { sales, saleItems } from '@smartbiz/db'
+import { items, stockMovements } from '@smartbiz/db'
 import { eq, and, desc, sql } from 'drizzle-orm'
 
 const app = new Hono<{ Variables: { user: any, organizationId: string } }>()

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/sync_service.dart';
+import '../services/database_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -8,34 +10,63 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    final db = context.read<DatabaseService>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: false,
-      ),
       body: ListView(
         children: [
-          _buildSettingsTile(Icons.business, 'Organization Profile'),
-          _buildSettingsTile(Icons.sync, 'Switch Organization'),
-          _buildSettingsTile(Icons.pie_chart_outline, 'Usage Stats'),
-          _buildSettingsTile(Icons.people_outline, 'Users'),
-          _buildSettingsTile(Icons.tune, 'Preferences'),
-          
-          const Divider(indent: 16, endIndent: 16),
-          
-          _buildSettingsTile(Icons.percent, 'Taxes'),
-          _buildSettingsTile(Icons.dashboard_customize_outlined, 'PDF Template Customization'),
-          _buildSettingsTile(Icons.payment, 'Online Payment Gateways'),
-          _buildSettingsTile(Icons.mail_outline, 'Sender Email Preferences'),
-          
-          const Divider(indent: 16, endIndent: 16),
-          
-          _buildSettingsTile(Icons.smartphone, 'Opening Screen - Default'),
-          _buildSettingsTile(Icons.image_outlined, 'Image upload resolution'),
-          _buildSettingsTile(Icons.security, 'Privacy & Security'),
-          
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Profile & Business'),
+          ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.business)),
+            title: Text(auth.organizationName),
+            subtitle: Text(auth.email),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+               // Profile details coming soon
+            },
+          ),
+          const Divider(),
+          _buildSectionHeader('Synchronisation'),
+          ListTile(
+            leading: const Icon(Icons.cloud_sync, color: Color(0xFF2563EB)),
+            title: const Text('Sync Cloud Data'),
+            subtitle: const Text('Pull latest updates from server'),
+            onTap: () async {
+              final token = auth.accessToken;
+              if (token != null) {
+                final sync = SyncService(db);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Starting manual sync...')));
+                final success = await sync.pullData(token);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(success ? '✅ Sync completed' : '❌ Sync failed')),
+                  );
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please log in to sync')));
+              }
+            },
+          ),
+          const Divider(),
+          _buildSectionHeader('App Preferences'),
+          SwitchListTile(
+            secondary: const Icon(Icons.dark_mode_outlined),
+            title: const Text('Dark Mode'),
+            subtitle: const Text('Adjust app theme'),
+            value: Theme.of(context).brightness == Brightness.dark,
+            onChanged: (v) {
+               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Theme settings coming soon')));
+            },
+          ),
+          const Divider(),
+          _buildSectionHeader('System'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('About SmartBiz GO'),
+            subtitle: const Text('Version 1.0.0 (Tanzania Build)'),
+          ),
+          const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton.icon(
@@ -55,7 +86,7 @@ class SettingsScreen extends StatelessWidget {
                   await auth.signOut();
                 }
               },
-              icon: const Icon(Icons.power_settings_new, color: Colors.red),
+              icon: const Icon(Icons.logout, color: Colors.red),
               label: const Text('Sign Out', style: TextStyle(color: Colors.red)),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.red.shade100),
@@ -69,48 +100,18 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsTile(IconData icon, String title) {
-    return _SettingsTile(
-      icon: icon,
-      title: title,
-      onTap: () {
-        // For now, just show a message or do nothing
-      },
-    );
-  }
-
-  void _showInfo(BuildContext context, String title, String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
-        ],
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF2563EB),
+          letterSpacing: 1.1,
+        ),
       ),
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.grey.shade600),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
-      onTap: onTap,
     );
   }
 }

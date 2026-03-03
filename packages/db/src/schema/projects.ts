@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, timestamp, boolean, varchar, pgEnum } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { organizations } from './auth';
+import { employees } from './hr';
 
 // Project Status Enum
 export const projectStatusEnum = pgEnum('project_status', ['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED']);
@@ -26,6 +27,7 @@ export const projectTasks = pgTable('project_tasks', {
     description: text('description'),
     status: varchar('status', { length: 50 }).notNull().default('PENDING'), // PENDING, IN_PROGRESS, COMPLETED
     dueDate: timestamp('due_date'),
+    assignedTo: uuid('assigned_to').references(() => employees.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -43,6 +45,10 @@ export const projectTasksRelations = relations(projectTasks, ({ one }) => ({
     project: one(projects, {
         fields: [projectTasks.projectId],
         references: [projects.id],
+    }),
+    assignee: one(employees, {
+        fields: [projectTasks.assignedTo],
+        references: [employees.id],
     }),
 }));
 

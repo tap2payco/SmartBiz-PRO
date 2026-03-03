@@ -33,25 +33,24 @@ class _SalesReceiptListScreenState extends State<SalesReceiptListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Widget body;
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_receipts.isEmpty) {
-      return const Center(
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_receipts.isEmpty) {
+      body = const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.receipt_long, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text('No receipts found.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Complete a sale in POS to generate a receipt', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
-    }
-
-    return Scaffold(
-      body: RefreshIndicator(
+    } else {
+      body = RefreshIndicator(
         onRefresh: _loadReceipts,
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -60,7 +59,7 @@ class _SalesReceiptListScreenState extends State<SalesReceiptListScreen> {
           itemBuilder: (context, index) {
             final receipt = _receipts[index];
             final date = DateTime.fromMillisecondsSinceEpoch(receipt['created_at']);
-            final total = receipt['total_amount'] as double;
+            final total = (receipt['total_amount'] as num).toDouble();
 
             return Card(
               child: ListTile(
@@ -80,7 +79,7 @@ class _SalesReceiptListScreenState extends State<SalesReceiptListScreen> {
                   '${DateFormat('MMM dd, yyyy').format(date)} • ${receipt['payment_type']}',
                 ),
                 trailing: Text(
-                  NumberFormat.currency(symbol: 'KSh ').format(total),
+                  NumberFormat.currency(symbol: 'TZS ').format(total),
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
                 ),
                 onTap: () async {
@@ -94,7 +93,11 @@ class _SalesReceiptListScreenState extends State<SalesReceiptListScreen> {
             );
           },
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      body: body,
     );
   }
 }

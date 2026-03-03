@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'services/database_service.dart';
 import 'services/auth_service.dart';
 import 'services/document_service.dart';
+import 'services/connectivity_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/splash_screen.dart';
@@ -21,10 +22,16 @@ void main() async {
   }
 
   try {
-    await Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL'] ?? '',
-      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
-    );
+    final url = dotenv.env['SUPABASE_URL'] ?? '';
+    final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    if (url.isNotEmpty && anonKey.isNotEmpty) {
+      await Supabase.initialize(
+        url: url,
+        anonKey: anonKey,
+      );
+    } else {
+      debugPrint('WARNING: Supabase URL or Anon Key is missing from .env');
+    }
   } catch (e) {
     debugPrint('Error initializing Supabase: $e');
   }
@@ -42,6 +49,13 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthService()),
         Provider<DatabaseService>.value(value: dbService),
         Provider<DocumentService>(create: (_) => DocumentService()),
+        ChangeNotifierProxyProvider2<DatabaseService, AuthService, ConnectivityService>(
+          create: (ctx) => ConnectivityService(
+            ctx.read<DatabaseService>(),
+            ctx.read<AuthService>(),
+          ),
+          update: (_, db, auth, prev) => prev ?? ConnectivityService(db, auth),
+        ),
       ],
       child: const SmartBizApp(),
     ),
@@ -61,7 +75,7 @@ class _SmartBizAppState extends State<SmartBizApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SmartBiz Pro',
+      title: 'SmartBiz GO',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

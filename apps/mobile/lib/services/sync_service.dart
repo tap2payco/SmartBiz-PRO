@@ -65,9 +65,25 @@ class SyncService {
             'phone': cust['phone'] ?? '',
             'address': cust['address'] ?? '',
             'loyalty_points': cust['loyaltyPoints'] ?? 0,
+            'is_synced': 1, // Pulled from server
             'updated_at': int.tryParse(timestamp) ?? 0,
           }).toList();
           await _db.upsertCustomers(customers);
+        }
+
+        // Sales (Invoices/Quotes)
+        if (changes['sales']?['updated'] != null) {
+            for (final sale in (changes['sales']['updated'] as List)) {
+                await _db.insertSale({
+                    'id': sale['id'],
+                    'customer_id': sale['customerId'],
+                    'total_amount': double.tryParse(sale['totalAmount'] ?? '0') ?? 0.0,
+                    'status': sale['paymentStatus'] == 'PAID' ? 'COMPLETED' : 'INVOICED',
+                    'is_synced': 1,
+                    'created_at': DateTime.parse(sale['createdAt']).millisecondsSinceEpoch,
+                    'updated_at': DateTime.parse(sale['updatedAt']).millisecondsSinceEpoch,
+                });
+            }
         }
       }
 
@@ -81,7 +97,73 @@ class SyncService {
 
   Future<bool> pushData(String token) async {
     try {
-      print('[Sync] Push: placeholder for local changes upload');
+      // 1. Fetch local unsynced sales
+      final unsyncedSales = await _db.query('sales', where: 'is_synced = 0');
+      // 2. Fetch local unsynced expenses
+      final unsyncedExpenses = await _db.query('expenses', where: 'is_synced = 0');
+      // 3. Fetch local unsynced customers
+      final unsyncedCustomers = await _db.query('customers', where: 'is_synced = 0');
+
+      if (unsyncedSales.isEmpty && unsyncedExpenses.isEmpty && unsyncedCustomers.isEmpty) {
+        return true; 
+      }
+
+      final payload = {
+        'changes': {
+          'sales': {
+            'created': unsyncedSales.map((s) => {
+              'id': s['id'],
+              'customerId': s['customer_id'],
+              'totalAmount': s['total_amount'],
+              'createdAt': DateTime.fromMillisecondsSinceEpoch(s['created_at']).toIso8601String(),
+              'updatedAt': DateTime.fromMillisecondsSinceEpoch(s['updated_at']).toIso8601String(),
+            }).toList(),
+          },
+          'expenses': {
+            'created': unsyncedExpenses.map((e) => {
+              'id': e['id'],
+              'description': e['description'],
+              'amount': e['amount'],
+              'categoryId': e['category_id'],
+              'date': DateTime.fromMillisecondsSinceEpoch(e['date']).toIso8601String(),
+            }).toList(),
+          },
+          'customers': {
+            'created': unsyncedCustomers.map((c) => {
+              'id': c['id'],
+              'fullName': c['full_name'],
+              'email': c['email'],
+              'phone': c['phone'],
+              'address': c['address'],
+            }).toList(),
+          }
+        }
+      };
+
+      final response = await http.post(
+        Uri.parse('$_apiUrl/sync/push'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Sync push failed: ${response.statusCode} ${response.body}');
+      }
+
+      // Mark as synced
+      for (final s in unsyncedSales) {
+        await _db.db.update('sales', {'is_synced': 1}, where: 'id = ?', whereArgs: [s['id']]);
+      }
+      for (final e in unsyncedExpenses) {
+        await _db.db.update('expenses', {'is_synced': 1}, where: 'id = ?', whereArgs: [e['id']]);
+      }
+      for (final c in unsyncedCustomers) {
+        await _db.db.update('customers', {'is_synced': 1}, where: 'id = ?', whereArgs: [c['id']]);
+      }
+
       return true;
     } catch (e) {
       print('[Sync] Push error: $e');

@@ -55,6 +55,11 @@ export default function SettingsPage() {
 
     const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<SettingsFormData>({
         resolver: zodResolver(settingsSchema),
+        defaultValues: {
+            taxEnabled: true,
+            vatRate: 18,
+            fiscalYearStart: '01-01',
+        }
     })
 
     useEffect(() => {
@@ -72,6 +77,9 @@ export default function SettingsPage() {
                     if (data.organization) {
                         setOrganization(data.organization)
                         reset({
+                            name: data.organization.name,
+                            industry: data.organization.industry || 'RETAIL',
+                            country: data.organization.country || 'TZ',
                             currency: data.organization.currency,
                             taxEnabled: data.organization.settings?.taxEnabled ?? true,
                             vatRate: data.organization.settings?.vatRate ?? 18,

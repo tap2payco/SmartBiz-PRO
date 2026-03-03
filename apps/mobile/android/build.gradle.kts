@@ -5,9 +5,10 @@ allprojects {
     }
 }
 
+val safeBuildPath = "C:/tmp/smartbiz_mobile_build"
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
-        .dir("../../build")
+        .dir(safeBuildPath)
         .get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 

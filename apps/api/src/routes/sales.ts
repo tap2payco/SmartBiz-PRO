@@ -1,13 +1,13 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db } from '@smartbiz/db'
-import { sales, saleItems, payments } from '@smartbiz/db/src/schema/sales'
-import { items, stockMovements } from '@smartbiz/db/src/schema/inventory'
-import { bankAccounts, bankTransactions } from '@smartbiz/db/src/schema/banking'
-import { stakeholders } from '@smartbiz/db/src/schema/stakeholders'
+import { sales, saleItems, payments } from '@smartbiz/db'
+import { items, stockMovements } from '@smartbiz/db'
+import { bankAccounts, bankTransactions } from '@smartbiz/db'
+import { stakeholders } from '@smartbiz/db'
 import { eq, and, desc, sql } from 'drizzle-orm'
 
-const app = new Hono<{ Variables: { user: any, organizationId: string } }>()
+const app = new Hono<{ Variables: { user: any, profile: any, organizationId: string } }>()
 
 // Validation Schemas
 const createSaleSchema = z.object({
@@ -129,13 +129,18 @@ app.post('/payments', async (c) => {
                         currentBalance: sql`${bankAccounts.currentBalance} + ${validated.amount}`,
                         updatedAt: new Date()
                     })
-                    .where(eq(bankAccounts.id, validated.accountId))
+                    .where(
+                        and(
+                            eq(bankAccounts.id, validated.accountId),
+                            eq(bankAccounts.organizationId, organizationId)
+                        )
+                    )
             }
 
             // 3. If saleId is present, update the sale balance
             if (validated.saleId) {
                 const sale = await tx.query.sales.findFirst({
-                    where: eq(sales.id, validated.saleId)
+                    where: and(eq(sales.id, validated.saleId), eq(sales.organizationId, organizationId))
                 })
                 if (sale) {
                     const newPaidTotal = parseFloat(sale.paidAmount) + validated.amount
@@ -143,7 +148,7 @@ app.post('/payments', async (c) => {
                         paidAmount: String(newPaidTotal),
                         paymentStatus: newPaidTotal >= parseFloat(sale.totalAmount) ? 'PAID' : 'PARTIAL',
                         updatedAt: new Date()
-                    }).where(eq(sales.id, validated.saleId))
+                    }).where(and(eq(sales.id, validated.saleId), eq(sales.organizationId, organizationId)))
                 }
             }
 
@@ -278,7 +283,7 @@ app.post('/', async (c) => {
                     .set({
                         updatedAt: new Date()
                     })
-                    .where(eq(items.id, item.itemId))
+                    .where(and(eq(items.id, item.itemId), eq(items.organizationId, organizationId)))
             }
 
             // 3. Create Payment and Bank Transaction if present
@@ -321,9 +326,21 @@ app.post('/', async (c) => {
                                 currentBalance: sql`${bankAccounts.currentBalance} + ${validated.payment.amount}`,
                                 updatedAt: new Date()
                             })
-                            .where(eq(bankAccounts.id, validated.payment.accountId));
+                            .where(and(eq(bankAccounts.id, validated.payment.accountId), eq(bankAccounts.organizationId, organizationId)));
                     }
                 }
+            }
+
+            // 4. Update Loyalty Points for Customers
+            if (validated.customerId) {
+                const pointsEarned = totalAmount * 0.01; // 1% of total amount
+                await tx
+                    .update(stakeholders)
+                    .set({
+                        loyaltyPoints: sql`${stakeholders.loyaltyPoints} + ${pointsEarned}`,
+                        updatedAt: new Date()
+                    })
+                    .where(and(eq(stakeholders.id, validated.customerId), eq(stakeholders.organizationId, organizationId)));
             }
 
             return newSale
@@ -443,7 +460,7 @@ app.post('/:id/payments', async (c) => {
                             currentBalance: sql`${bankAccounts.currentBalance} + ${newAmount}`,
                             updatedAt: new Date()
                         })
-                        .where(eq(bankAccounts.id, validated.accountId));
+                        .where(and(eq(bankAccounts.id, validated.accountId), eq(bankAccounts.organizationId, organizationId)));
                 }
             }
 
@@ -456,7 +473,7 @@ app.post('/:id/payments', async (c) => {
                     paymentStatus: newPaidTotal >= total ? 'PAID' : 'PARTIAL',
                     updatedAt: new Date()
                 })
-                .where(eq(sales.id, saleId))
+                .where(and(eq(sales.id, saleId), eq(sales.organizationId, organizationId)))
                 .returning()
 
             return updated

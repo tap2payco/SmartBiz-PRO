@@ -34,25 +34,24 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Widget body;
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_quotes.isEmpty) {
-      return const Center(
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_quotes.isEmpty) {
+      body = const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.request_quote, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text('No quotations found.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Tap + to create your first quote', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
-    }
-
-    return Scaffold(
-      body: RefreshIndicator(
+    } else {
+      body = RefreshIndicator(
         onRefresh: _loadQuotes,
         child: ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -61,7 +60,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
           itemBuilder: (context, index) {
             final quote = _quotes[index];
             final date = DateTime.fromMillisecondsSinceEpoch(quote['created_at']);
-            final total = quote['total_amount'] as double;
+            final total = (quote['total_amount'] as num).toDouble();
 
             return Card(
               child: ListTile(
@@ -88,7 +87,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          NumberFormat.currency(symbol: 'KSh ').format(total),
+                          NumberFormat.currency(symbol: 'TZS ').format(total),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.orange,
@@ -122,7 +121,11 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
             );
           },
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      body: body,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
