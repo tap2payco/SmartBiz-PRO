@@ -40,6 +40,26 @@ SmartBiz PRO is a comprehensive, offline-first ERP solution designed for Retail 
 - `packages/db`: Drizzle Schema and Migrations
 - `packages/shared`: Shared Types and Utilities
 
+## 🌐 Deployment (Render)
+
+### Frontend (Next.js)
+- **Service Type**: Static Site or Web Service
+- **Root Directory**: `.` (Monorepo root)
+- **Build Command**: `npm install && npm run build --workspace=smartbiz-web`
+- **Publish Directory**: `apps/web/out` (if static) or standard Next.js for web service.
+- **Environment Variables**: 
+  - `NODE_VERSION`: `20`
+  - `NEXT_PUBLIC_API_URL`: Your backend URL
+
+### Backend (Hono)
+- **Service Type**: Web Service
+- **Root Directory**: `.` (Monorepo root)
+- **Build Command**: `npm install && npm run build:render --workspace=smartbiz-api`
+- **Start Command**: `npm run start:render --workspace=smartbiz-api`
+- **Environment Variables**:
+  - `NODE_VERSION`: `20`
+  - `DATABASE_URL`: Your PostgreSQL connection string
+
 ## 🛡️ Security & Performance
 - **Organization Scoping**: Strict multi-tenant isolation at the database and API levels.
 - **Database Indexing**: Optimized for high-volume transactions.
