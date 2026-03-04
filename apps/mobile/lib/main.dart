@@ -39,6 +39,10 @@ void main() async {
     debugPrint('Error initializing Database: $e');
   }
 
+  // Prevent Google Fonts from trying to download fonts at runtime
+  // This avoids crashes when there's no/slow network on first launch
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   runApp(
     MultiProvider(
       providers: [
