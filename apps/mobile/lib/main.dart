@@ -15,25 +15,21 @@ import 'screens/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  bool isConfigValid = false;
   try {
     await dotenv.load(fileName: '.env');
-  } catch (e) {
-    debugPrint('Error loading .env: $e');
-  }
-
-  try {
     final url = dotenv.env['SUPABASE_URL'] ?? '';
     final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    
     if (url.isNotEmpty && anonKey.isNotEmpty) {
       await Supabase.initialize(
         url: url,
         anonKey: anonKey,
       );
-    } else {
-      debugPrint('WARNING: Supabase URL or Anon Key is missing from .env');
+      isConfigValid = true;
     }
   } catch (e) {
-    debugPrint('Error initializing Supabase: $e');
+    debugPrint('Startup Configuration Error: $e');
   }
 
   final dbService = DatabaseService();
@@ -57,13 +53,14 @@ void main() async {
           update: (_, db, auth, prev) => prev ?? ConnectivityService(db, auth),
         ),
       ],
-      child: const SmartBizApp(),
+      child: SmartBizApp(isConfigValid: isConfigValid),
     ),
   );
 }
 
 class SmartBizApp extends StatefulWidget {
-  const SmartBizApp({super.key});
+  final bool isConfigValid;
+  const SmartBizApp({super.key, required this.isConfigValid});
 
   @override
   State<SmartBizApp> createState() => _SmartBizAppState();
@@ -74,6 +71,48 @@ class _SmartBizAppState extends State<SmartBizApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isConfigValid) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: const Color(0xFFEF4444),
+        ),
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Color(0xFFEF4444)),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Configuration Error',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'The application configuration (.env) is missing or invalid. Please check your setup and try again.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Attempt to reload or exit
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       title: 'SmartBiz GO',
       debugShowCheckedModeBanner: false,

@@ -10,19 +10,29 @@ class AuthService extends ChangeNotifier {
   bool get loading => _loading;
   String get email => _user?.email ?? '';
 
-  final _supabase = Supabase.instance.client;
-
   String _organizationName = 'SmartBiz Pro';
   String get organizationName => _organizationName;
 
   AuthService() {
-    _user = _supabase.auth.currentUser;
-    _fetchOrgInfo();
-    _supabase.auth.onAuthStateChange.listen((data) {
-      _user = data.session?.user;
-      if (_user != null) _fetchOrgInfo();
-      notifyListeners();
-    });
+    try {
+      _user = Supabase.instance.client.auth.currentUser;
+      _fetchOrgInfo();
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        _user = data.session?.user;
+        if (_user != null) _fetchOrgInfo();
+        notifyListeners();
+      });
+    } catch (e) {
+      debugPrint('AuthService: Supabase not initialized or available: $e');
+    }
+  }
+
+  SupabaseClient get _supabase {
+    try {
+      return Supabase.instance.client;
+    } catch (e) {
+      throw Exception('Supabase is not initialized. Please check your configuration.');
+    }
   }
 
   Future<void> _fetchOrgInfo() async {
