@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
 import '../services/database_service.dart';
+import '../services/theme_manager.dart';
+import '../services/app_lock_service.dart';
+import 'pin_lock_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -49,14 +52,73 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
           const Divider(),
-          _buildSectionHeader('App Preferences'),
-          SwitchListTile(
-            secondary: const Icon(Icons.dark_mode_outlined),
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Adjust app theme'),
-            value: Theme.of(context).brightness == Brightness.dark,
-            onChanged: (v) {
-               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Theme settings coming soon')));
+          _buildSectionHeader('App Appearance'),
+          Consumer<ThemeManager>(
+            builder: (context, theme, _) => SwitchListTile(
+              secondary: const Icon(Icons.dark_mode_outlined),
+              title: const Text('Dark Mode'),
+              subtitle: const Text('Adjust app theme'),
+              value: theme.isDarkMode,
+              onChanged: (v) => theme.toggleTheme(),
+            ),
+          ),
+          const Divider(),
+          _buildSectionHeader('Security'),
+          Consumer<AppLockService>(
+            builder: (context, lock, _) => Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.lock_outline),
+                  title: const Text('Enable PIN Lock'),
+                  subtitle: const Text('Require PIN to open app'),
+                  value: lock.isEnabled,
+                  onChanged: (v) async {
+                    if (v && !lock.hasPin) {
+                      // Must set PIN first
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const PinLockScreen(setupMode: true)));
+                    } else {
+                      await lock.toggleLock(v);
+                    }
+                  },
+                ),
+                if (lock.isEnabled)
+                  ListTile(
+                    leading: const SizedBox(width: 40),
+                    title: const Text('Change PIN'),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PinLockScreen(setupMode: true))),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(),
+          _buildSectionHeader('Business Settings'),
+          ListTile(
+            leading: const Icon(Icons.receipt_long_outlined),
+            title: const Text('Tax Options'),
+            subtitle: const Text('Current Rate: 18% (TZS VAT)'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Configure General Tax'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Set the default tax rate for all sales and reports.'),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: '18',
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(suffixText: '%', labelText: 'VAT Rate'),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                    FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Save')),
+                  ],
+                ),
+              );
             },
           ),
           const Divider(),

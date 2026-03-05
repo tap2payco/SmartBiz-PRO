@@ -150,7 +150,59 @@ app.post('/push', async (c) => {
                 expenses: { created: 0 }
             }
 
-            // 1. Process Sales
+            // 1. Process Items
+            if (changes.items?.created) {
+                for (const item of changes.items.created) {
+                    const existing = await tx.query.items.findFirst({
+                        where: eq(items.id, item.id)
+                    })
+
+                    if (!existing) {
+                        await tx.insert(items).values({
+                            id: item.id,
+                            organizationId,
+                            name: item.name,
+                            sku: item.sku,
+                            barcode: item.barcode,
+                            description: item.description,
+                            categoryId: item.categoryId || 'default',
+                            costPrice: String(item.costPrice || '0'),
+                            sellingPrice: String(item.sellingPrice || '0'),
+                            stockLevel: item.stockLevel || 0,
+                            isActive: true,
+                            createdAt: new Date(),
+                            updatedAt: new Date(item.updatedAt || Date.now()),
+                        })
+                        syncResults.items = (syncResults.items || 0) + 1
+                    }
+                }
+            }
+
+            // 2. Process Customers (Stakeholders)
+            if (changes.customers?.created) {
+                for (const cust of changes.customers.created) {
+                    const existing = await tx.query.stakeholders.findFirst({
+                        where: eq(stakeholders.id, cust.id)
+                    })
+
+                    if (!existing) {
+                        await tx.insert(stakeholders).values({
+                            id: cust.id,
+                            organizationId,
+                            type: 'CUSTOMER',
+                            fullName: cust.fullName,
+                            email: cust.email,
+                            phone: cust.phone,
+                            address: cust.address,
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                        })
+                        syncResults.customers = (syncResults.customers || 0) + 1
+                    }
+                }
+            }
+
+            // 3. Process Sales
             if (changes.sales?.created) {
                 for (const sale of changes.sales.created) {
                     // Basic duplicate check by ID (since mobile provides the ID)
@@ -177,7 +229,7 @@ app.post('/push', async (c) => {
                 }
             }
 
-            // 2. Process Expenses
+            // 4. Process Expenses
             if (changes.expenses?.created) {
                 for (const exp of changes.expenses.created) {
                     const existing = await tx.query.expenses.findFirst({

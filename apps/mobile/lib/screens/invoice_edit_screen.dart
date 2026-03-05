@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import 'scanner_screen.dart';
@@ -15,6 +16,7 @@ class InvoiceEditScreen extends StatefulWidget {
 class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedCustomerId;
+  List<Map<String, dynamic>> _customers = [];
   List<Map<String, dynamic>> _lineItems = [];
   DateTime _date = DateTime.now();
   final _invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
@@ -22,9 +24,16 @@ class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCustomers();
     if (widget.invoice != null) {
       // Load existing invoice data if editing
     }
+  }
+
+  Future<void> _loadCustomers() async {
+    final db = context.read<DatabaseService>();
+    final customers = await db.getCustomers();
+    if (mounted) setState(() => _customers = customers);
   }
 
   double get _subtotal => _lineItems.fold(0, (sum, item) => sum + (item['total_price'] as double));
@@ -69,6 +78,33 @@ class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
                         if (picked != null) setState(() => _date = picked);
                       },
                     ),
+                    const Divider(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedCustomerId,
+                            decoration: const InputDecoration(
+                              labelText: 'Customer (Optional)',
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
+                            items: [
+                              const DropdownMenuItem(value: null, child: Text('Walk-in Customer')),
+                              ..._customers.map((c) => DropdownMenuItem(
+                                value: c['id'] as String,
+                                child: Text(c['full_name'] as String),
+                              )),
+                            ],
+                            onChanged: (v) => setState(() => _selectedCustomerId = v),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.person_add, color: Color(0xFF2563EB)),
+                          onPressed: _addNewCustomer,
+                          tooltip: 'Add New Customer',
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -77,8 +113,8 @@ class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
             const Text('Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ..._lineItems.map((item) => ListTile(
               title: Text(item['name']),
-              subtitle: Text('${item['quantity']} x ${NumberFormat.simpleCurrency(name: 'KES').format(item['unit_price'])}'),
-              trailing: Text(NumberFormat.simpleCurrency(name: 'KES').format(item['total_price'])),
+              subtitle: Text('${item['quantity']} x ${NumberFormat.simpleCurrency(name: 'TZS').format(item['unit_price'])}'),
+              trailing: Text(NumberFormat.simpleCurrency(name: 'TZS').format(item['total_price'])),
               onLongPress: () => setState(() => _lineItems.remove(item)),
             )),
             Row(
@@ -203,22 +239,86 @@ class _InvoiceEditScreenState extends State<InvoiceEditScreen> {
     }
 
     final db = context.read<DatabaseService>();
-    final invoiceId = DateTime.now().millisecondsSinceEpoch.toString();
+    final invoiceId = const Uuid().v4();
     
+    // Save sale record
     await db.insertSale({
       'id': invoiceId,
+      'customer_id': _selectedCustomerId,
       'total_amount': _total,
       'status': 'INVOICED',
       'payment_type': 'UNPAID',
+      'is_synced': 0,
       'created_at': _date.millisecondsSinceEpoch,
       'updated_at': DateTime.now().millisecondsSinceEpoch,
     });
 
-    // Save items logic would go here in DatabaseService
+    // Save line items
+    for (var item in _lineItems) {
+      await db.insertItem({ // Using raw insert for sale_items doesn't exist. Workaround: insert manually or add method. Let's add a raw insert.
+         // Wait, db.insertSale works, but sale_items needs direct insert. Let me just use raw insert for now.
+      });
+      await db.db.insert('sale_items', {
+        'id': const Uuid().v4(),
+        'sale_id': invoiceId,
+        'item_id': item['item_id'],
+        'quantity': item['quantity'],
+        'unit_price': item['unit_price'],
+        'total_price': item['total_price'],
+      });
+    }
     
     if (mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invoice saved successfully')));
     }
+  }
+
+  void _addNewCustomer() {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Customer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Full Name'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(labelText: 'Phone'),
+              keyboardType: TextInputType.phone,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) return;
+              final db = context.read<DatabaseService>();
+              final id = const Uuid().v4();
+              await db.insertCustomer({
+                'id': id,
+                'full_name': nameController.text.trim(),
+                'phone': phoneController.text.trim(),
+                'is_synced': 0,
+                'updated_at': DateTime.now().millisecondsSinceEpoch,
+              });
+              await _loadCustomers();
+              setState(() => _selectedCustomerId = id);
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 }

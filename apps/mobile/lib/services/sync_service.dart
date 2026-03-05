@@ -97,19 +97,33 @@ class SyncService {
 
   Future<bool> pushData(String token) async {
     try {
-      // 1. Fetch local unsynced sales
+      // 1. Fetch local unsynced data
       final unsyncedSales = await _db.query('sales', where: 'is_synced = 0');
-      // 2. Fetch local unsynced expenses
       final unsyncedExpenses = await _db.query('expenses', where: 'is_synced = 0');
-      // 3. Fetch local unsynced customers
       final unsyncedCustomers = await _db.query('customers', where: 'is_synced = 0');
+      final unsyncedItems = await _db.query('items', where: 'is_synced = 0');
 
-      if (unsyncedSales.isEmpty && unsyncedExpenses.isEmpty && unsyncedCustomers.isEmpty) {
+      if (unsyncedSales.isEmpty && unsyncedExpenses.isEmpty && 
+          unsyncedCustomers.isEmpty && unsyncedItems.isEmpty) {
         return true; 
       }
 
       final payload = {
         'changes': {
+          'items': {
+            'created': unsyncedItems.map((i) => {
+              'id': i['id'],
+              'name': i['name'],
+              'sku': i['sku'] ?? '',
+              'barcode': i['barcode'] ?? '',
+              'description': i['description'] ?? '',
+              'categoryId': i['category_id'] ?? 'default',
+              'costPrice': i['cost_price'] ?? 0,
+              'sellingPrice': i['selling_price'] ?? 0,
+              'stockLevel': i['stock_level'] ?? 0,
+              'updatedAt': i['updated_at'],
+            }).toList(),
+          },
           'sales': {
             'created': unsyncedSales.map((s) => {
               'id': s['id'],
@@ -162,6 +176,9 @@ class SyncService {
       }
       for (final c in unsyncedCustomers) {
         await _db.db.update('customers', {'is_synced': 1}, where: 'id = ?', whereArgs: [c['id']]);
+      }
+      for (final i in unsyncedItems) {
+        await _db.db.update('items', {'is_synced': 1}, where: 'id = ?', whereArgs: [i['id']]);
       }
 
       return true;

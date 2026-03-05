@@ -62,7 +62,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               child: ListTile(
                 title: const Text('Output VAT'),
                 subtitle: const Text('Estimated from sales'),
-                trailing: Text(NumberFormat.simpleCurrency(name: 'KES').format(_totalSales * 0.18 / 1.18)),
+                trailing: Text(NumberFormat.simpleCurrency(name: 'TZS').format(_totalSales * 0.18 / 1.18)),
               ),
             ),
             const SizedBox(height: 24),
@@ -94,7 +94,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 14)),
-                Text(NumberFormat.simpleCurrency(name: 'KES').format(value), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(NumberFormat.simpleCurrency(name: 'TZS').format(value), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               ],
             ),
           ],

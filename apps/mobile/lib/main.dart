@@ -8,9 +8,12 @@ import 'services/database_service.dart';
 import 'services/auth_service.dart';
 import 'services/document_service.dart';
 import 'services/connectivity_service.dart';
+import 'services/theme_manager.dart';
+import 'services/app_lock_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/splash_screen.dart';
+import 'screens/pin_lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +50,8 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => ThemeManager()),
+        ChangeNotifierProvider(create: (_) => AppLockService()),
         Provider<DatabaseService>.value(value: dbService),
         Provider<DocumentService>(create: (_) => DocumentService()),
         ChangeNotifierProxyProvider2<DatabaseService, AuthService, ConnectivityService>(
@@ -72,6 +77,12 @@ class SmartBizApp extends StatefulWidget {
 
 class _SmartBizAppState extends State<SmartBizApp> {
   bool _showSplash = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(_LifecycleObserver(context));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,58 +128,129 @@ class _SmartBizAppState extends State<SmartBizApp> {
       );
     }
 
-    return MaterialApp(
-      title: 'SmartBiz GO',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF2563EB),
-        brightness: Brightness.light,
-        textTheme: GoogleFonts.interTextTheme(),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade200),
+    return Consumer<ThemeManager>(
+      builder: (context, themeManager, child) {
+        return MaterialApp(
+          title: 'SmartBiz GO',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeManager.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: const Color(0xFF2563EB),
+            brightness: Brightness.light,
+            textTheme: GoogleFonts.interTextTheme(),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+            cardTheme: CardThemeData(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey.shade100),
+              ),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade200),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: const Color(0xFF2563EB),
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xFF121212),
+            textTheme: GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: const Color(0xFF1E1E1E),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade800),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade800),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              labelStyle: TextStyle(color: Colors.grey.shade400),
+              hintStyle: TextStyle(color: Colors.grey.shade500),
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+            cardTheme: CardThemeData(
+              color: const Color(0xFF1E1E1E),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey.shade800),
+              ),
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF121212),
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+            ),
+            dividerTheme: DividerThemeData(
+              color: Colors.grey.shade800,
+            ),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2563EB),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-        ),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.grey.shade100),
-          ),
-        ),
-      ),
-      home: _showSplash 
-        ? SplashScreen(onComplete: () => setState(() => _showSplash = false))
-        : Consumer<AuthService>(
-            builder: (context, auth, _) {
-              if (auth.isAuthenticated) {
-                return const HomeShell();
-              }
-              return const LoginScreen();
-            },
-          ),
+          home: _showSplash 
+            ? SplashScreen(onComplete: () => setState(() => _showSplash = false))
+            : Consumer2<AuthService, AppLockService>(
+                builder: (context, auth, lock, _) {
+                  if (lock.isLocked) {
+                    return const PinLockScreen();
+                  }
+                  if (auth.isAuthenticated) {
+                    return const HomeShell();
+                  }
+                  return const LoginScreen();
+                },
+              ),
+        );
+      },
     );
+  }
+}
+
+class _LifecycleObserver extends WidgetsBindingObserver {
+  final BuildContext context;
+  _LifecycleObserver(this.context);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      Provider.of<AppLockService>(context, listen: false).lock();
+    }
   }
 }

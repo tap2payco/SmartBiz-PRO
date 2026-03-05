@@ -121,7 +121,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    Text('KES ${_currencyFormat.format(item['selling_price'])}',
+                                    Text('TZS ${_currencyFormat.format(item['selling_price'])}',
                                         style: const TextStyle(
                                             color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 4),

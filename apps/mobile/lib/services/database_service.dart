@@ -15,7 +15,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE IF NOT EXISTS items (
@@ -29,10 +29,12 @@ class DatabaseService {
             category_id TEXT,
             is_active INTEGER DEFAULT 1,
             stock_level INTEGER DEFAULT 0,
+            is_synced INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
 
+        // ... existing tables ...
         await db.execute('''
           CREATE TABLE IF NOT EXISTS categories (
             id TEXT PRIMARY KEY,
@@ -147,7 +149,14 @@ class DatabaseService {
             await db.execute('ALTER TABLE expenses ADD COLUMN is_synced INTEGER DEFAULT 0');
             await db.execute('ALTER TABLE customers ADD COLUMN is_synced INTEGER DEFAULT 0');
           } catch (e) {
-            // Column may already exist if onCreate was called recently
+            // Column may already exist
+          }
+        }
+        if (oldVersion < 5) {
+          try {
+            await db.execute('ALTER TABLE items ADD COLUMN is_synced INTEGER DEFAULT 0');
+          } catch (e) {
+            // Column may already exist
           }
         }
       },
