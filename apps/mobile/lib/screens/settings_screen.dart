@@ -145,6 +145,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 );
                 if (confirmed == true) {
+                  await db.clearAllData();
                   await auth.signOut();
                 }
               },

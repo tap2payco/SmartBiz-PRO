@@ -41,7 +41,7 @@ stakeholdersApp.get('/', async (c) => {
         .orderBy(desc(stakeholders.createdAt));
 
     const results = await query;
-    return c.json({ stakeholders: results });
+    return c.json(results);
 });
 
 // GET /stakeholders/:id - Get single

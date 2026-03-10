@@ -37,6 +37,38 @@ class _LoginScreenState extends State<LoginScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
+    } else if (mounted) {
+      // Trigger sync after login
+      final connectivity = context.read<ConnectivityService>();
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 24),
+                Text('Syncing your data...', style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Text('Please wait while we set up your workspace', textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      );
+      
+      final syncSuccess = await connectivity.autoSync();
+      if (mounted) {
+        Navigator.pop(context); // Close dialog
+        if (!syncSuccess) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Initial sync failed. You can sync manually later in settings.')),
+          );
+        }
+      }
     }
   }
 

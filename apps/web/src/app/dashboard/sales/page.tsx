@@ -51,11 +51,12 @@ export default function SalesHistoryPage() {
                 const data = await res.json()
                 setSales(Array.isArray(data) ? data : [])
             } else {
-                toast.error('Failed to fetch sales history')
+                const errorData = await res.json().catch(() => ({}))
+                toast.error(errorData.error || 'Failed to fetch sales history. Please try again.')
             }
         } catch (error) {
             console.error('Fetch sales error:', error)
-            toast.error('An error occurred while loading sales')
+            toast.error('Unable to connect to the server. Please check your internet connection.')
         } finally {
             setIsLoading(false)
         }
@@ -168,8 +169,11 @@ export default function SalesHistoryPage() {
                                 ))
                             ) : filteredSales.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
-                                        No transactions found.
+                                    <td colSpan={6} className="px-6 py-10 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-500">
+                                            <AlertCircle className="h-10 w-10 mb-2 opacity-20" />
+                                            <p>No transactions found.</p>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (

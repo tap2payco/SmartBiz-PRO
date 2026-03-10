@@ -263,6 +263,14 @@ class DatabaseService {
     await batch.commit(noResult: true);
   }
 
+  Future<void> upsertSaleItems(List<Map<String, dynamic>> items) async {
+    final batch = db.batch();
+    for (var item in items) {
+      batch.insert('sale_items', item, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
   // Generic Insert
   Future<bool> insertItem(Map<String, dynamic> item) async {
     try {
@@ -305,5 +313,19 @@ class DatabaseService {
 
   Future<List<Map<String, dynamic>>> query(String table, {String? where, List<Object?>? whereArgs, String? orderBy}) async {
     return await db.query(table, where: where, whereArgs: whereArgs, orderBy: orderBy);
+  }
+
+  Future<void> clearAllData() async {
+    final batch = db.batch();
+    batch.delete('items');
+    batch.delete('categories');
+    batch.delete('customers');
+    batch.delete('sales');
+    batch.delete('sale_items');
+    batch.delete('invoice_payments');
+    batch.delete('expenses');
+    batch.delete('expense_categories');
+    batch.delete('sync_meta');
+    await batch.commit(noResult: true);
   }
 }

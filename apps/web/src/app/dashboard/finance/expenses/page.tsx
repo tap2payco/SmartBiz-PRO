@@ -16,6 +16,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
 import { AddExpenseDialog } from '@/components/finance/AddExpenseDialog'
+import { toast } from 'sonner'
+import { AlertCircle } from 'lucide-react'
 
 interface ExpenseCategory {
     id: string
@@ -62,6 +64,8 @@ export default function ExpensesPage() {
             if (expensesRes.ok) {
                 const data = await expensesRes.json()
                 setExpenses(data)
+            } else {
+                toast.error('Failed to load expense list')
             }
             if (summaryRes.ok) {
                 const data = await summaryRes.json()
@@ -69,6 +73,7 @@ export default function ExpensesPage() {
             }
         } catch (error) {
             console.error('Failed to fetch expenses:', error)
+            toast.error('Connection error. Could not load expenses.')
         } finally {
             setLoading(false)
         }
@@ -208,9 +213,11 @@ export default function ExpensesPage() {
                                 </TableRow>
                             ) : expenses.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-8">
-                                        <Receipt className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-                                        <p className="text-muted-foreground">No expenses recorded yet</p>
+                                    <TableCell colSpan={7} className="text-center py-10">
+                                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                            <AlertCircle className="w-10 h-10 mb-2 opacity-20" />
+                                            <p>No expenses recorded yet</p>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (

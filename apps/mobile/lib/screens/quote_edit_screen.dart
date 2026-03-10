@@ -190,34 +190,77 @@ class _QuoteEditScreenState extends State<QuoteEditScreen> {
     final items = await db.getItems();
     if (!mounted) return;
 
-    showDialog(
+    String searchQuery = '';
+    
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Select Item'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: items.length,
-            itemBuilder: (_, i) => ListTile(
-              title: Text(items[i]['name']),
-              subtitle: Text('TZS ${items[i]['selling_price']}'),
-              onTap: () {
-                setState(() {
-                  _lineItems.add({
-                    'id': items[i]['id'],
-                    'name': items[i]['name'],
-                    'item_id': items[i]['id'],
-                    'quantity': 1,
-                    'unit_price': (items[i]['selling_price'] ?? 0.0) as double,
-                    'total_price': (items[i]['selling_price'] ?? 0.0) as double,
-                  });
-                });
-                Navigator.pop(ctx);
-              },
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final filteredItems = items.where((i) => 
+            i['name'].toString().toLowerCase().contains(searchQuery.toLowerCase()) ||
+            i['sku'].toString().toLowerCase().contains(searchQuery.toLowerCase())
+          ).toList();
+
+          return DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            maxChildSize: 0.9,
+            minChildSize: 0.5,
+            expand: false,
+            builder: (_, scrollController) => Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search items...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                    onChanged: (v) => setModalState(() => searchQuery = v),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: filteredItems.length,
+                    itemBuilder: (ctx, i) {
+                      final item = filteredItems[i];
+                      return ListTile(
+                        title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('SKU: ${item['sku']} • TZS ${item['selling_price']}'),
+                        trailing: const Icon(Icons.add_circle_outline, color: Color(0xFF2563EB)),
+                        onTap: () {
+                          setState(() {
+                            // Check if item already exists
+                            final existingIndex = _lineItems.indexWhere((li) => li['item_id'] == item['id']);
+                            if (existingIndex != -1) {
+                               _lineItems[existingIndex]['quantity']++;
+                               _lineItems[existingIndex]['total_price'] = _lineItems[existingIndex]['quantity'] * _lineItems[existingIndex]['unit_price'];
+                            } else {
+                              _lineItems.add({
+                                'id': item['id'],
+                                'name': item['name'],
+                                'item_id': item['id'],
+                                'quantity': 1,
+                                'unit_price': (item['selling_price'] ?? 0.0) as double,
+                                'total_price': (item['selling_price'] ?? 0.0) as double,
+                              });
+                            }
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

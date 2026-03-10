@@ -290,7 +290,16 @@ export default function HRDashboard() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    {leaveRequests.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-10 text-gray-500">No leave requests found.</TableCell></TableRow>}
+                                    {leaveRequests.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-10">
+                                                <div className="flex flex-col items-center justify-center text-gray-500">
+                                                    <AlertCircle className="h-10 w-10 mb-2 opacity-20" />
+                                                    <p>No leave requests found.</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -313,7 +322,16 @@ export default function HRDashboard() {
                                             <TableCell className="text-xs text-gray-500">{format(new Date(adv.createdAt), 'MMM dd, yyyy')}</TableCell>
                                         </TableRow>
                                     ))}
-                                    {advances.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-10 text-gray-500">No advances found.</TableCell></TableRow>}
+                                    {advances.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-10">
+                                                <div className="flex flex-col items-center justify-center text-gray-500">
+                                                    <AlertCircle className="h-10 w-10 mb-2 opacity-20" />
+                                                    <p>No advances found.</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>

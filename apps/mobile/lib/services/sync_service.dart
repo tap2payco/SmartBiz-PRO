@@ -85,6 +85,19 @@ class SyncService {
                 });
             }
         }
+
+        // Sale Items
+        if (changes['saleItems']?['updated'] != null) {
+            final saleItems = (changes['saleItems']['updated'] as List).map((si) => {
+                'id': si['id'],
+                'sale_id': si['saleId'],
+                'item_id': si['itemId'],
+                'quantity': double.tryParse(si['quantity']?.toString() ?? '1') ?? 1.0,
+                'unit_price': double.tryParse(si['unitPrice']?.toString() ?? '0') ?? 0.0,
+                'total_price': double.tryParse(si['total']?.toString() ?? '0') ?? 0.0,
+            }).toList();
+            await _db.upsertSaleItems(saleItems);
+        }
       }
 
       await _db.setSyncMeta('last_pulled_at', timestamp);
@@ -108,6 +121,21 @@ class SyncService {
         return true; 
       }
 
+      final List<Map<String, dynamic>> salesWithItems = [];
+      for (final s in unsyncedSales) {
+          final items = await _db.query('sale_items', where: 'sale_id = ?', whereArgs: [s['id']]);
+          salesWithItems.add({
+              ...s,
+              'lineItems': items.map((i) => {
+                  'id': i['id'],
+                  'itemId': i['item_id'],
+                  'quantity': i['quantity'],
+                  'unitPrice': i['unit_price'],
+                  'totalPrice': i['total_price'],
+              }).toList(),
+          });
+      }
+
       final payload = {
         'changes': {
           'items': {
@@ -125,12 +153,13 @@ class SyncService {
             }).toList(),
           },
           'sales': {
-            'created': unsyncedSales.map((s) => {
+            'created': salesWithItems.map((s) => {
               'id': s['id'],
               'customerId': s['customer_id'],
               'totalAmount': s['total_amount'],
               'createdAt': DateTime.fromMillisecondsSinceEpoch(s['created_at']).toIso8601String(),
               'updatedAt': DateTime.fromMillisecondsSinceEpoch(s['updated_at']).toIso8601String(),
+              'lineItems': s['lineItems'],
             }).toList(),
           },
           'expenses': {

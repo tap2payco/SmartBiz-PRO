@@ -286,7 +286,14 @@ export default function DashboardPage() {
                         {isSyncing ? (
                             <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
                         ) : activeProjects.length === 0 ? (
-                            <div className="text-center py-6 text-sm text-gray-400 italic">No active projects</div>
+                            <div className="text-center py-6 flex flex-col items-center">
+                                <p className="text-sm text-gray-400 italic mb-3">No active projects yet.</p>
+                                <Link href="/dashboard/projects">
+                                    <Button variant="outline" size="sm" className="text-xs">
+                                        Create Your First Project
+                                    </Button>
+                                </Link>
+                            </div>
                         ) : (
                             activeProjects.map((proj) => {
                                 const completed = proj.tasks?.filter((t: any) => t.status === 'COMPLETED').length || 0
@@ -327,7 +334,12 @@ export default function DashboardPage() {
                             {isSyncing ? (
                                 <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
                             ) : loyalCustomers.length === 0 ? (
-                                <div className="text-center py-6 text-sm text-gray-400 italic">No customer data yet</div>
+                                <div className="text-center py-6 flex flex-col items-center">
+                                    <p className="text-sm text-gray-400 italic mb-3">No customer data yet.</p>
+                                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setOpenCustomer(true)}>
+                                        Add Your First Customer
+                                    </Button>
+                                </div>
                             ) : (
                                 loyalCustomers.map((cust, idx) => (
                                     <div key={cust.id} className="flex items-center gap-3">

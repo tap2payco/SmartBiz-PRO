@@ -54,6 +54,7 @@ app.get('/pull', async (c) => {
             changedCategories,
             changedCustomers,
             changedSales,
+            changedSaleItems,
             changedProjects,
             changedExpenses,
             changedExpenseCategories
@@ -64,7 +65,7 @@ app.get('/pull', async (c) => {
             )),
             db.select().from(categories).where(and(
                 eq(categories.organizationId, organizationId),
-                gt(categories.updatedAt, since) // Provided schema has updatedAt
+                gt(categories.updatedAt, since)
             )),
             db.select().from(stakeholders).where(and(
                 eq(stakeholders.organizationId, organizationId),
@@ -74,6 +75,13 @@ app.get('/pull', async (c) => {
                 eq(sales.organizationId, organizationId),
                 gt(sales.updatedAt, since)
             )),
+            db.select().from(saleItems)
+                .innerJoin(sales, eq(saleItems.saleId, sales.id))
+                .where(and(
+                    eq(sales.organizationId, organizationId),
+                    gt(sales.updatedAt, since) // If sale changed, pull its items
+                ))
+                .then(results => results.map(r => r.sale_items)),
             db.select().from(projects).where(and(
                 eq(projects.organizationId, organizationId),
                 gt(projects.updatedAt, since)
@@ -84,47 +92,20 @@ app.get('/pull', async (c) => {
             )),
             db.select().from(expenseCategories).where(and(
                 eq(expenseCategories.organizationId, organizationId),
-                gt(expenseCategories.createdAt, since) // No updatedAt on expenseCategories in current schema
+                gt(expenseCategories.createdAt, since)
             ))
         ])
 
         return c.json({
             changes: {
-                items: {
-                    created: [], // For now, we mix created/updated as 'updated' usually covers both in simple delta
-                    updated: changedItems,
-                    deleted: [] // We need soft delete logic for this
-                },
-                categories: {
-                    created: [],
-                    updated: changedCategories,
-                    deleted: []
-                },
-                customers: {
-                    created: [],
-                    updated: changedCustomers,
-                    deleted: []
-                },
-                sales: {
-                    created: [],
-                    updated: changedSales,
-                    deleted: []
-                },
-                projects: {
-                    created: [],
-                    updated: changedProjects,
-                    deleted: []
-                },
-                expenses: {
-                    created: [],
-                    updated: changedExpenses,
-                    deleted: []
-                },
-                expenseCategories: {
-                    created: [],
-                    updated: changedExpenseCategories,
-                    deleted: []
-                }
+                items: { updated: changedItems, deleted: [] },
+                categories: { updated: changedCategories, deleted: [] },
+                customers: { updated: changedCustomers, deleted: [] },
+                sales: { updated: changedSales, deleted: [] },
+                saleItems: { updated: changedSaleItems, deleted: [] },
+                projects: { updated: changedProjects, deleted: [] },
+                expenses: { updated: changedExpenses, deleted: [] },
+                expenseCategories: { updated: changedExpenseCategories, deleted: [] }
             },
             timestamp: Date.now()
         })
@@ -146,7 +127,10 @@ app.post('/push', async (c) => {
 
         const results = await db.transaction(async (tx: any) => {
             const syncResults: any = {
+                items: { created: 0 },
+                customers: { created: 0 },
                 sales: { created: 0 },
+                saleItems: { created: 0 },
                 expenses: { created: 0 }
             }
 
@@ -173,7 +157,7 @@ app.post('/push', async (c) => {
                             createdAt: new Date(),
                             updatedAt: new Date(item.updatedAt || Date.now()),
                         })
-                        syncResults.items = (syncResults.items || 0) + 1
+                        syncResults.items.created++
                     }
                 }
             }
@@ -197,7 +181,7 @@ app.post('/push', async (c) => {
                             createdAt: new Date(),
                             updatedAt: new Date(),
                         })
-                        syncResults.customers = (syncResults.customers || 0) + 1
+                        syncResults.customers.created++
                     }
                 }
             }
@@ -205,7 +189,6 @@ app.post('/push', async (c) => {
             // 3. Process Sales
             if (changes.sales?.created) {
                 for (const sale of changes.sales.created) {
-                    // Basic duplicate check by ID (since mobile provides the ID)
                     const existing = await tx.query.sales.findFirst({
                         where: eq(sales.id, sale.id)
                     })
@@ -216,7 +199,7 @@ app.post('/push', async (c) => {
                             organizationId,
                             customerId: sale.customerId,
                             saleNumber: `SALE-${sale.id.substring(0, 8).toUpperCase()}`,
-                            subtotal: String(sale.totalAmount), // Simplistic mapping for now
+                            subtotal: String(sale.totalAmount),
                             totalAmount: String(sale.totalAmount),
                             paidAmount: String(sale.totalAmount),
                             paymentStatus: 'PAID',
@@ -225,6 +208,22 @@ app.post('/push', async (c) => {
                             createdBy: user?.id,
                         })
                         syncResults.sales.created++
+
+                        // Process Sale Items bundled with sale
+                        if (sale.lineItems) {
+                            for (const li of sale.lineItems) {
+                                await tx.insert(saleItems).values({
+                                    id: li.id,
+                                    saleId: sale.id,
+                                    itemId: li.itemId,
+                                    quantity: String(li.quantity),
+                                    unitPrice: String(li.unitPrice),
+                                    total: String(li.totalPrice),
+                                    createdAt: new Date(sale.createdAt),
+                                })
+                                syncResults.saleItems.created++
+                            }
+                        }
                     }
                 }
             }
