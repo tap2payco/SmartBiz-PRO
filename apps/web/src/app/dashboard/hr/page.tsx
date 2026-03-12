@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Users, Calendar, Coins, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Plus, Users, Calendar, Coins, Loader2, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import {
