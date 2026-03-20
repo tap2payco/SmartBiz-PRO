@@ -15,6 +15,15 @@ class _SalesReceiptListScreenState extends State<SalesReceiptListScreen> {
   List<Map<String, dynamic>> _receipts = [];
   bool _isLoading = true;
 
+  final Map<String, Color> _saleStatusColors = {
+    'completed': Colors.green,
+    'draft': Colors.grey,
+    'cancelled': Colors.red,
+    'paid': Colors.blue,
+    'unpaid': Colors.orange,
+    'partial_paid': Colors.purple,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -60,16 +69,19 @@ class _SalesReceiptListScreenState extends State<SalesReceiptListScreen> {
             final receipt = _receipts[index];
             final date = DateTime.fromMillisecondsSinceEpoch(receipt['created_at']);
             final total = (receipt['total_amount'] as num).toDouble();
+            // Assuming 'status' field exists in receipt data, default to 'completed' if not found
+            final String status = receipt['status'] ?? 'completed';
+            final Color statusColor = _saleStatusColors[status] ?? Colors.grey;
 
             return Card(
               child: ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.receipt_long, color: Colors.green),
+                  child: Icon(Icons.receipt_long, color: statusColor),
                 ),
                 title: Text(
                   'REC-${receipt['id'].toString().substring(0, 8).toUpperCase()}',

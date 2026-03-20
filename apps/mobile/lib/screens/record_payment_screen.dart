@@ -157,15 +157,15 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
       'amount': amount,
       'payment_method': _paymentMethod,
       'created_at': DateTime.now().millisecondsSinceEpoch,
+      'is_synced': 0,
     };
 
-    // Save to DB (Assuming insertPayment exists or using a generic one)
-    // For now I'll just use a direct query or generic insert
+    // Save to DB
     await db.db.insert('invoice_payments', paymentData);
     
-    // Update invoice status if fully paid
+    // Update invoice status if fully paid and mark as unsynced
     if (amount >= _selectedInvoice!['total_amount']) {
-      await db.db.update('sales', {'status': 'PAID'}, where: 'id = ?', whereArgs: [_selectedInvoice!['id']]);
+      await db.db.update('sales', {'status': 'PAID', 'is_synced': 0}, where: 'id = ?', whereArgs: [_selectedInvoice!['id']]);
     }
 
     if (mounted) {

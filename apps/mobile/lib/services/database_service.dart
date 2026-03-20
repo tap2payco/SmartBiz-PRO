@@ -15,7 +15,9 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 5,
+      version: 8,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 6) {
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE IF NOT EXISTS items (
@@ -90,6 +92,7 @@ class DatabaseService {
             payment_method TEXT,
             receipt_url TEXT,
             created_at INTEGER DEFAULT 0,
+            is_synced INTEGER DEFAULT 0,
             FOREIGN KEY (invoice_id) REFERENCES sales (id) ON DELETE CASCADE
           )
         ''');
@@ -123,6 +126,71 @@ class DatabaseService {
             is_synced INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0,
             FOREIGN KEY (category_id) REFERENCES expense_categories (id)
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS hr_leaves (
+            id TEXT PRIMARY KEY,
+            employee_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            start_date INTEGER NOT NULL,
+            end_date INTEGER NOT NULL,
+            reason TEXT,
+            status TEXT DEFAULT 'PENDING',
+            is_synced INTEGER DEFAULT 0,
+            updated_at INTEGER DEFAULT 0
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS payroll_payslips (
+            id TEXT PRIMARY KEY,
+            employee_id TEXT NOT NULL,
+            period_start INTEGER NOT NULL,
+            period_end INTEGER NOT NULL,
+            net_pay REAL DEFAULT 0,
+            pdf_url TEXT,
+            status TEXT DEFAULT 'PAID',
+            is_synced INTEGER DEFAULT 1,
+            updated_at INTEGER DEFAULT 0
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS suppliers (
+            id TEXT PRIMARY KEY,
+            full_name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            address TEXT,
+            is_synced INTEGER DEFAULT 0,
+            updated_at INTEGER DEFAULT 0
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS purchases (
+            id TEXT PRIMARY KEY,
+            supplier_id TEXT,
+            total_amount REAL DEFAULT 0,
+            status TEXT DEFAULT 'COMPLETED',
+            payment_type TEXT DEFAULT 'CASH',
+            is_synced INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT 0,
+            updated_at INTEGER DEFAULT 0
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS purchase_items (
+            id TEXT PRIMARY KEY,
+            purchase_id TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            quantity INTEGER DEFAULT 0,
+            unit_price REAL DEFAULT 0,
+            total_price REAL DEFAULT 0,
+            FOREIGN KEY (purchase_id) REFERENCES purchases (id) ON DELETE CASCADE
           )
         ''');
 
@@ -219,6 +287,15 @@ class DatabaseService {
     return await db.query('sales', where: "status = 'INVOICED' OR status = 'PARTIAL' OR status = 'PAID'", orderBy: 'created_at DESC');
   }
 
+  Future<List<Map<String, dynamic>>> getReturns() async {
+    return await db.query('sales', where: "status = 'RETURNED'", orderBy: 'created_at DESC');
+  }
+
+  Future<Map<String, dynamic>?> getSaleById(String id) async {
+    final results = await db.query('sales', where: 'id = ?', whereArgs: [id], limit: 1);
+    return results.isNotEmpty ? results.first : null;
+  }
+
   Future<List<Map<String, dynamic>>> getSaleItems(String saleId) async {
     return await db.query('sale_items', where: 'sale_id = ?', whereArgs: [saleId]);
   }
@@ -267,6 +344,54 @@ class DatabaseService {
     final batch = db.batch();
     for (var item in items) {
       batch.insert('sale_items', item, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertPayments(List<Map<String, dynamic>> payments) async {
+    final batch = db.batch();
+    for (var payment in payments) {
+      batch.insert('invoice_payments', payment, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertLeaves(List<Map<String, dynamic>> leaves) async {
+    final batch = db.batch();
+    for (var leave in leaves) {
+      batch.insert('hr_leaves', leave, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertPayslips(List<Map<String, dynamic>> slips) async {
+    final batch = db.batch();
+    for (var slip in slips) {
+      batch.insert('payroll_payslips', slip, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertSuppliers(List<Map<String, dynamic>> suppliers) async {
+    final batch = db.batch();
+    for (var sup in suppliers) {
+      batch.insert('suppliers', sup, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertPurchases(List<Map<String, dynamic>> purchases) async {
+    final batch = db.batch();
+    for (var pur in purchases) {
+      batch.insert('purchases', pur, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertPurchaseItems(List<Map<String, dynamic>> items) async {
+    final batch = db.batch();
+    for (var item in items) {
+      batch.insert('purchase_items', item, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }

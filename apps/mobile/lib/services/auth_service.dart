@@ -13,6 +13,9 @@ class AuthService extends ChangeNotifier {
   String _organizationName = 'SmartBiz Pro';
   String get organizationName => _organizationName;
 
+  String? _employeeId;
+  String? get employeeId => _employeeId;
+
   AuthService() {
     try {
       _user = Supabase.instance.client.auth.currentUser;
@@ -51,9 +54,21 @@ class AuthService extends ChangeNotifier {
           .single();
       
       _organizationName = org['name'];
+
+      // Fetch Employee info if linked via email
+      final employee = await _supabase
+          .from('employees')
+          .select('id')
+          .eq('email', _user!.email!)
+          .maybeSingle();
+      
+      if (employee != null) {
+        _employeeId = employee['id'];
+      }
+
       notifyListeners();
     } catch (e) {
-      debugPrint('Error fetching org info: $e');
+      debugPrint('Error fetching org/employee info: $e');
     }
   }
 

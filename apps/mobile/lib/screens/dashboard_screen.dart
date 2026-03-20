@@ -10,6 +10,7 @@ import '../services/connectivity_service.dart';
 import 'sales_screen.dart';
 import 'scanner_screen.dart';
 import 'add_product_screen.dart';
+import 'payslips_list_screen.dart';
 import 'placeholder_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -269,10 +270,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             children: [
               _buildActionChip('New Sale', Icons.point_of_sale, const Color(0xFF2563EB), 13),
-              const SizedBox(width: 12),
-              _buildActionChip('Scan Item', Icons.qr_code_scanner, Colors.teal, -1),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               _buildActionChip('Add Item', Icons.add_box_outlined, Colors.orange, 2),
+              const SizedBox(width: 8),
+              _buildActionChip('Payslips', Icons.receipt_long, Colors.blue, 14),
             ],
           ),
         ],
@@ -301,7 +302,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Widget screen;
             switch (drawerIndex) {
               case 14:
-                screen = const SalesScreen();
+                screen = const PayslipsListScreen();
                 break;
               case 2:
                 screen = const AddProductScreen();

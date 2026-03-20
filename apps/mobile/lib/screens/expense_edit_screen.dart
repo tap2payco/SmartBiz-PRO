@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
@@ -54,31 +54,31 @@ class _ExpenseEditScreenState extends State<ExpenseEditScreen> {
   }
 
   Future<void> _compressImage(String filePath) async {
-    final tempDir = await getTemporaryDirectory();
-    final targetPath = p.join(tempDir.path, "compressed_${DateTime.now().millisecondsSinceEpoch}.jpg");
+    try {
+      final bytes = await File(filePath).readAsBytes();
+      final image = img.decodeImage(bytes);
+      
+      if (image == null) {
+        setState(() => _isCompressing = false);
+        return;
+      }
 
-    final result = await FlutterImageCompress.compressAndGetFile(
-      filePath,
-      targetPath,
-      quality: 30, // Low quality for small size
-      minWidth: 800,
-      minHeight: 800,
-    );
+      // Resize and compress
+      final resized = img.copyResize(image, width: 800);
+      final compressedBytes = img.encodeJpg(resized, quality: 30);
 
-    if (result != null) {
-      // Save permanently to documents directory
       final appDir = await getApplicationDocumentsDirectory();
       final finalPath = p.join(appDir.path, "receipt_${DateTime.now().millisecondsSinceEpoch}.jpg");
-      await File(result.path).copy(finalPath);
+      await File(finalPath).writeAsBytes(compressedBytes);
       
       setState(() {
         _compressedPath = finalPath;
         _isCompressing = false;
       });
       
-      final fileSize = await File(finalPath).length();
-      debugPrint('Compressed file size: ${fileSize / 1024} KB');
-    } else {
+      debugPrint('Compressed file size: ${compressedBytes.length / 1024} KB');
+    } catch (e) {
+      debugPrint('Compression error: $e');
       setState(() => _isCompressing = false);
     }
   }

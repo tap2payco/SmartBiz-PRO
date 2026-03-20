@@ -105,6 +105,7 @@ class _SalesScreenState extends State<SalesScreen> {
         'total_amount': _total,
         'status': _isQuotation ? 'QUOTATION' : 'COMPLETED',
         'payment_type': _isQuotation ? 'N/A' : _paymentMethod,
+        'is_synced': 0,
         'created_at': DateTime.now().millisecondsSinceEpoch,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       };
