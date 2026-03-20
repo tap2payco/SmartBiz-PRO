@@ -59,7 +59,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final quote = _quotes[index];
-            final date = DateTime.fromMillisecondsSinceEpoch(quote['created_at']);
+            final date = DateTime.fromMillisecondsSinceEpoch(quote['created_at'] as int);
             final total = (quote['total_amount'] as num).toDouble();
 
             return Card(

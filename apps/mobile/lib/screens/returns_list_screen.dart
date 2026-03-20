@@ -58,7 +58,7 @@ class _ReturnsListScreenState extends State<ReturnsListScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final ret = _returns[index];
-                      final date = DateTime.fromMillisecondsSinceEpoch(ret['created_at']);
+                      final date = DateTime.fromMillisecondsSinceEpoch(ret['created_at'] as int);
                       final total = (ret['total_amount'] as num).toDouble();
 
                       return Card(

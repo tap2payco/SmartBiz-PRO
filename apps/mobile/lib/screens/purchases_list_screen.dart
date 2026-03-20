@@ -60,7 +60,7 @@ class _PurchasesListScreenState extends State<PurchasesListScreen> {
                     itemCount: _purchases.length,
                     itemBuilder: (context, index) {
                       final pur = _purchases[index];
-                      final date = DateTime.fromMillisecondsSinceEpoch(pur['created_at']);
+                      final date = DateTime.fromMillisecondsSinceEpoch(pur['created_at'] as int);
                       
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),

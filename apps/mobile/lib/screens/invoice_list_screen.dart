@@ -59,7 +59,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final invoice = _invoices[index];
-            final date = DateTime.fromMillisecondsSinceEpoch(invoice['created_at']);
+            final date = DateTime.fromMillisecondsSinceEpoch(invoice['created_at'] as int);
             final total = (invoice['total_amount'] as num).toDouble();
 
             return Card(

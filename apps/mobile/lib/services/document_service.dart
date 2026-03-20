@@ -10,7 +10,7 @@ import 'package:share_plus/share_plus.dart';
 class DocumentService {
   Future<void> generateAndShareInvoice(Map<String, dynamic> sale) async {
     final pdf = pw.Document();
-    final date = DateTime.fromMillisecondsSinceEpoch(sale['created_at']);
+    final date = DateTime.fromMillisecondsSinceEpoch(sale['created_at'] as int);
     final isQuote = sale['status'] == 'QUOTATION';
     final title = isQuote ? 'QUOTATION' : 'INVOICE';
     final idPrefix = isQuote ? 'QUO' : 'INV';

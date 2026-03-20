@@ -269,7 +269,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildActionChip('New Sale', Icons.point_of_sale, const Color(0xFF2563EB), 13),
+              _buildActionChip('New Sale', Icons.point_of_sale, const Color(0xFF2563EB), 17),
               const SizedBox(width: 8),
               _buildActionChip('Add Item', Icons.add_box_outlined, Colors.orange, 2),
               const SizedBox(width: 8),
@@ -301,6 +301,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // For now, since it's a shell, we can push the screen directly for quick access
             Widget screen;
             switch (drawerIndex) {
+              case 17:
+                screen = const SalesScreen();
+                break;
               case 14:
                 screen = const PayslipsListScreen();
                 break;

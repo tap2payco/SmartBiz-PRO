@@ -168,7 +168,7 @@ class _CreateReturnScreenState extends State<CreateReturnScreen> {
           itemCount: sales.length,
           itemBuilder: (_, i) => ListTile(
             title: Text('Invoice #INV-${sales[i]['id'].toString().substring(0, 8).toUpperCase()}'),
-            subtitle: Text('Date: ${DateFormat('MMM dd').format(DateTime.fromMillisecondsSinceEpoch(sales[i]['created_at']))} • Total: TZS ${sales[i]['total_amount']}'),
+            subtitle: Text('Date: ${DateFormat('MMM dd').format(DateTime.fromMillisecondsSinceEpoch(sales[i]['created_at'] as int))} • Total: TZS ${sales[i]['total_amount']}'),
             onTap: () {
               _loadSaleDetails(sales[i]);
               Navigator.pop(ctx);
