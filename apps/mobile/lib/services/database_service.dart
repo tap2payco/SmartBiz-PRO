@@ -16,8 +16,6 @@ class DatabaseService {
     _db = await openDatabase(
       path,
       version: 8,
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 6) {
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE IF NOT EXISTS items (
