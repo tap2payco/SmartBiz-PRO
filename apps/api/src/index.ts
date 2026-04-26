@@ -4,7 +4,7 @@ import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { prettyJSON } from 'hono/pretty-json';
 import { authMiddleware } from './middleware/auth';
-import organizations from './routes/organizations';
+
 import { User } from '@supabase/supabase-js';
 import { Profile } from '@smartbiz/shared';
 
@@ -17,6 +17,8 @@ type Variables = {
 
 import { requestId } from 'hono/request-id';
 import { timing } from 'hono/timing';
+
+const app = new Hono<Variables>();
 
 // Middleware
 // 1. Request ID and Timing (Industrial traceability)

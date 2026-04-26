@@ -77,7 +77,6 @@ export default function SalesHistoryPage() {
     }
 
     return (
-    return (
         <div className="space-y-8 pb-10 animate-in fade-in duration-700">
             {/* Premium Header */}
             <div className="glass rounded-3xl p-8 relative overflow-hidden border border-white/20">
