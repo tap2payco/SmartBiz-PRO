@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.tap2pay.smartbiz_go"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

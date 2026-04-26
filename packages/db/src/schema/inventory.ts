@@ -28,6 +28,7 @@ export const itemCategories = pgTable('item_categories', {
     description: text('description'),
     parentId: uuid('parent_id'), // For subcategories
     isActive: boolean('is_active').notNull().default(true),
+    isDeleted: boolean('is_deleted').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow()
 })
@@ -49,6 +50,7 @@ export const items = pgTable('items', {
     reorderQuantity: integer('reorder_quantity').default(0),
     imageUrl: text('image_url'),
     isActive: boolean('is_active').notNull().default(true),
+    isDeleted: boolean('is_deleted').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow()
 }, (table) => {
@@ -67,6 +69,7 @@ export const locations = pgTable('locations', {
     type: locationTypeEnum('type').notNull().default('STORE'),
     address: text('address'),
     isActive: boolean('is_active').notNull().default(true),
+    isDeleted: boolean('is_deleted').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow()
 })
 
@@ -160,6 +163,7 @@ export const stockTransfers = pgTable('stock_transfers', {
     driverName: varchar('driver_name', { length: 100 }),
     vehicleNumber: varchar('vehicle_number', { length: 50 }),
     createdBy: uuid('created_by'),
+    isDeleted: boolean('is_deleted').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow()
 })

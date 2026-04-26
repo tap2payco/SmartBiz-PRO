@@ -13,6 +13,8 @@ import 'add_product_screen.dart';
 import 'payslips_list_screen.dart';
 import 'placeholder_screen.dart';
 
+import '../widgets/skeleton_loader.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -22,6 +24,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _syncing = false;
+  bool _isLoading = true;
   double _todayRevenue = 0;
   int _orderCount = 0;
   int _lowStockCount = 0;
@@ -41,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadStats() async {
+    setState(() => _isLoading = true);
     final db = context.read<DatabaseService>();
 
     final items = await db.getItems();
@@ -72,6 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _lowStockCount = items.where((i) => ((i['stock_level'] as int?) ?? 0) <= 5).length;
         _salesTrend = trend;
         _dayLabels = labels;
+        _isLoading = false;
       });
     }
   }
@@ -117,23 +122,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.colorScheme.background,
       body: RefreshIndicator(
         onRefresh: _loadStats,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildAppBar(),
+              const SizedBox(height: 24),
               _buildHeader(),
-              const SizedBox(height: 24),
-              _buildStatsGrid(),
-              const SizedBox(height: 24),
-              _buildChartSection(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
+              _isLoading ? _buildStatsSkeleton() : _buildStatsGrid(),
+              const SizedBox(height: 32),
+              _isLoading ? _buildChartSkeleton() : _buildChartSection(),
+              const SizedBox(height: 32),
               _buildQuickActions(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               _buildSyncCard(),
             ],
           ),
@@ -142,15 +150,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildStatsSkeleton() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.4,
+      children: const [
+        SkeletonCard(),
+        SkeletonCard(),
+        SkeletonCard(),
+        SkeletonCard(),
+      ],
+    );
+  }
+
+  Widget _buildChartSkeleton() {
+    return const SkeletonLoader(width: double.infinity, height: 260, borderRadius: 24);
+  }
+
+  Widget _buildAppBar() {
+    final profile = context.read<AuthService>().profile;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+          ),
+          child: const Icon(Icons.grid_view_rounded, size: 20),
+        ),
+        Row(
+          children: [
+            const Icon(Icons.notifications_outlined, color: Colors.grey),
+            const SizedBox(width: 16),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF4F46E5)]),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+              ),
+              child: Center(
+                child: Text(
+                  (profile?['firstName'] ?? 'U')[0].toUpperCase(),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildHeader() {
+    final profile = context.read<AuthService>().profile;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Business Overview',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87)),
+        Text(
+          'Good morning, ${profile?['firstName'] ?? 'Partner'}!',
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF1E293B), letterSpacing: -1),
+        ),
         const SizedBox(height: 4),
-        Text(DateFormat('EEEE, MMMM dd, yyyy').format(DateTime.now()),
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+        Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey.shade500),
+            const SizedBox(width: 6),
+            Text(DateFormat('EEEE, MMM dd').format(DateTime.now()),
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
+        ),
       ],
     );
   }
@@ -178,13 +255,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark 
+            ? [color.withOpacity(0.15), color.withOpacity(0.05)]
+            : [Colors.white, color.withOpacity(0.05)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: color.withOpacity(0.1)),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: color.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -192,18 +281,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 22),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(value, 
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: -0.5)
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(label, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w500)),
             ],
           ),
         ],
@@ -212,44 +307,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildChartSection() {
-    return Container(
-      height: 260,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: 280,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : theme.dividerColor.withOpacity(0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Sales Trend', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Sales Performance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: -0.5)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text('Last 7 Days', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _SimpleChartPainter(
+                    data: _salesTrend,
+                    labels: _dayLabels,
+                    lineColor: theme.colorScheme.primary,
+                    fillColor: theme.colorScheme.primary.withOpacity(0.1),
+                  ),
                 ),
-                child: const Text('Last 7 Days', style: TextStyle(fontSize: 11, color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: _SimpleChartPainter(
-                data: _salesTrend,
-                labels: _dayLabels,
-                lineColor: const Color(0xFF2563EB),
-                fillColor: const Color(0xFF2563EB).withOpacity(0.08),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

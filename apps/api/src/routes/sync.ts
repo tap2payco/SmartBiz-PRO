@@ -11,7 +11,8 @@ import { quotations, quotationItems, returns, returnItems, payments } from '@sma
 import { leaveRequests, employees } from '@smartbiz/db'
 import { payrollRuns, payrollRunLines } from '@smartbiz/db'
 import { purchaseOrders, purchaseOrderLines } from '@smartbiz/db'
-import { gt, eq, and, sql } from 'drizzle-orm'
+import { bankAccounts, bankTransactions } from '@smartbiz/db'
+import { gt, eq, and, sql, or } from 'drizzle-orm'
 
 const app = new Hono<{ Variables: { user: any, organizationId: string } }>()
 
@@ -19,54 +20,64 @@ const app = new Hono<{ Variables: { user: any, organizationId: string } }>()
 const pushSchema = z.object({
     changes: z.object({
         items: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         sales: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         customers: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         expenses: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         quotations: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         returns: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         payments: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         leaves: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         suppliers: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional(),
         purchases: z.object({
-            created: z.array(z.any()),
-            updated: z.array(z.any()),
-            deleted: z.array(z.string()),
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
+        }).optional(),
+        bankTransactions: z.object({
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
+        }).optional(),
+        stockMovements: z.object({
+            created: z.array(z.any()).optional(),
+            updated: z.array(z.any()).optional(),
+            deleted: z.array(z.string()).optional(),
         }).optional()
     })
 })
@@ -101,7 +112,10 @@ app.get('/pull', async (c) => {
             changedPayslips,
             changedSuppliers,
             changedPurchases,
-            changedPurchaseItems
+            changedPurchaseItems,
+            changedBankAccounts,
+            changedBankTransactions,
+            changedStockMovements
         ] = await Promise.all([
             db.select().from(items).where(and(
                 eq(items.organizationId, organizationId),
@@ -123,7 +137,7 @@ app.get('/pull', async (c) => {
                 .innerJoin(sales, eq(saleItems.saleId, sales.id))
                 .where(and(
                     eq(sales.organizationId, organizationId),
-                    gt(sales.updatedAt, since) // If sale changed, pull its items
+                    gt(sales.updatedAt, since)
                 ))
                 .then(results => results.map(r => r.sale_items)),
             db.select().from(projects).where(and(
@@ -190,15 +204,27 @@ app.get('/pull', async (c) => {
                     eq(purchaseOrders.organizationId, organizationId),
                     gt(purchaseOrders.updatedAt, since)
                 ))
-                .then(results => results.map(r => r.purchase_order_lines))
+                .then(results => results.map(r => r.purchase_order_lines)),
+            db.select().from(bankAccounts).where(and(
+                eq(bankAccounts.organizationId, organizationId),
+                gt(bankAccounts.updatedAt, since)
+            )),
+            db.select().from(bankTransactions).where(and(
+                eq(bankTransactions.organizationId, organizationId),
+                gt(bankTransactions.createdAt, since)
+            )),
+            db.select().from(stockMovements).where(and(
+                eq(stockMovements.organizationId, organizationId),
+                gt(stockMovements.createdAt, since)
+            ))
         ])
 
         return c.json({
             changes: {
-                items: { updated: changedItems, deleted: [] },
-                categories: { updated: changedCategories, deleted: [] },
-                customers: { updated: changedCustomers, deleted: [] },
-                sales: { updated: changedSales, deleted: [] },
+                items: { updated: changedItems, deleted: changedItems.filter(i => i.isDeleted).map(i => i.id) },
+                categories: { updated: changedCategories, deleted: changedCategories.filter(c => c.isDeleted).map(c => c.id) },
+                customers: { updated: changedCustomers, deleted: changedCustomers.filter(c => c.isDeleted).map(c => c.id) },
+                sales: { updated: changedSales, deleted: changedSales.filter(s => s.isDeleted).map(s => s.id) },
                 saleItems: { updated: changedSaleItems, deleted: [] },
                 projects: { updated: changedProjects, deleted: [] },
                 expenses: { updated: changedExpenses, deleted: [] },
@@ -207,12 +233,15 @@ app.get('/pull', async (c) => {
                 quotationItems: { updated: changedQuotationItems, deleted: [] },
                 returns: { updated: changedReturns, deleted: [] },
                 returnItems: { updated: changedReturnItems, deleted: [] },
-                payments: { updated: changedPayments, deleted: [] },
+                payments: { updated: changedPayments, deleted: changedPayments.filter(p => p.isDeleted).map(p => p.id) },
                 leaves: { updated: changedLeaves, deleted: [] },
                 payslips: { updated: changedPayslips, deleted: [] },
                 suppliers: { updated: changedSuppliers, deleted: [] },
-                purchases: { updated: changedPurchases, deleted: [] },
-                purchaseItems: { updated: changedPurchaseItems, deleted: [] }
+                purchases: { updated: changedPurchases, deleted: changedPurchases.filter(p => p.isDeleted).map(p => p.id) },
+                purchaseItems: { updated: changedPurchaseItems, deleted: [] },
+                bankAccounts: { updated: changedBankAccounts, deleted: [] },
+                bankTransactions: { updated: changedBankTransactions, deleted: [] },
+                stockMovements: { updated: changedStockMovements, deleted: [] }
             },
             timestamp: Date.now()
         })
@@ -234,30 +263,51 @@ app.post('/push', async (c) => {
 
         const results = await db.transaction(async (tx: any) => {
             const syncResults: any = {
-                items: { created: 0 },
-                customers: { created: 0 },
-                sales: { created: 0 },
-                saleItems: { created: 0 },
-                expenses: { created: 0 },
-                quotations: { created: 0 },
-                returns: { created: 0 },
-                payments: { created: 0 },
-                leaves: { created: 0 },
-                suppliers: { created: 0 },
-                purchases: { created: 0 }
+                items: { processed: 0 },
+                customers: { processed: 0 },
+                sales: { processed: 0 },
+                expenses: { processed: 0 },
+                quotations: { processed: 0 },
+                returns: { processed: 0 },
+                payments: { processed: 0 },
+                leaves: { processed: 0 },
+                suppliers: { processed: 0 },
+                purchases: { processed: 0 },
+                bankTransactions: { processed: 0 },
+                stockMovements: { processed: 0 }
+            }
+
+            // Helper for Upsert
+            const processUpsert = async (table: any, data: any[], mapper: (d: any) => any) => {
+                for (const d of data) {
+                    const values = mapper(d)
+                    await tx.insert(table).values(values).onConflictDoUpdate({
+                        target: table.id,
+                        set: { ...values, updatedAt: new Date() }
+                    })
+                }
             }
 
             // 1. Process Items
-            if (changes.items?.created) {
-                for (const item of changes.items.created) {
-                    const existing = await tx.query.items.findFirst({
-                        where: eq(items.id, item.id)
-                    })
-
-                    if (!existing) {
-                        await tx.insert(items).values({
-                            id: item.id,
-                            organizationId,
+            if (changes.items?.created || changes.items?.updated) {
+                const allItems = [...(changes.items.created || []), ...(changes.items.updated || [])]
+                for (const item of allItems) {
+                    await tx.insert(items).values({
+                        id: item.id,
+                        organizationId,
+                        name: item.name,
+                        sku: item.sku,
+                        barcode: item.barcode,
+                        description: item.description,
+                        categoryId: item.categoryId || 'default',
+                        costPrice: String(item.costPrice || '0'),
+                        sellingPrice: String(item.sellingPrice || '0'),
+                        stockLevel: item.stockLevel || 0,
+                        isActive: true,
+                        updatedAt: new Date(),
+                    }).onConflictDoUpdate({
+                        target: items.id,
+                        set: {
                             name: item.name,
                             sku: item.sku,
                             barcode: item.barcode,
@@ -266,298 +316,199 @@ app.post('/push', async (c) => {
                             costPrice: String(item.costPrice || '0'),
                             sellingPrice: String(item.sellingPrice || '0'),
                             stockLevel: item.stockLevel || 0,
-                            isActive: true,
-                            createdAt: new Date(),
-                            updatedAt: new Date(item.updatedAt || Date.now()),
-                        })
-                        syncResults.items.created++
-                    }
+                            updatedAt: new Date()
+                        }
+                    })
+                    syncResults.items.processed++
                 }
             }
 
-            // 2. Process Customers (Stakeholders)
-            if (changes.customers?.created) {
-                for (const cust of changes.customers.created) {
-                    const existing = await tx.query.stakeholders.findFirst({
-                        where: eq(stakeholders.id, cust.id)
-                    })
-
-                    if (!existing) {
-                        await tx.insert(stakeholders).values({
-                            id: cust.id,
-                            organizationId,
-                            type: 'CUSTOMER',
+            // 2. Process Customers
+            if (changes.customers?.created || changes.customers?.updated) {
+                const all = [...(changes.customers.created || []), ...(changes.customers.updated || [])]
+                for (const cust of all) {
+                    await tx.insert(stakeholders).values({
+                        id: cust.id,
+                        organizationId,
+                        type: 'CUSTOMER',
+                        fullName: cust.fullName,
+                        email: cust.email,
+                        phone: cust.phone,
+                        address: cust.address,
+                        updatedAt: new Date(),
+                    }).onConflictDoUpdate({
+                        target: stakeholders.id,
+                        set: {
                             fullName: cust.fullName,
                             email: cust.email,
                             phone: cust.phone,
                             address: cust.address,
-                            createdAt: new Date(),
-                            updatedAt: new Date(),
-                        })
-                        syncResults.customers.created++
-                    }
+                            updatedAt: new Date()
+                        }
+                    })
+                    syncResults.customers.processed++
                 }
             }
 
             // 3. Process Sales
-            if (changes.sales?.created) {
-                for (const sale of changes.sales.created) {
-                    const existing = await tx.query.sales.findFirst({
-                        where: eq(sales.id, sale.id)
+            if (changes.sales?.created || changes.sales?.updated) {
+                const all = [...(changes.sales.created || []), ...(changes.sales.updated || [])]
+                for (const sale of all) {
+                    await tx.insert(sales).values({
+                        id: sale.id,
+                        organizationId,
+                        customerId: sale.customerId,
+                        saleNumber: `SALE-${sale.id.substring(0, 8).toUpperCase()}`,
+                        subtotal: String(sale.totalAmount),
+                        totalAmount: String(sale.totalAmount),
+                        paidAmount: sale.status === 'COMPLETED' ? String(sale.totalAmount) : '0',
+                        status: sale.status || 'COMPLETED',
+                        paymentStatus: sale.status === 'COMPLETED' ? 'PAID' : 'PENDING',
+                        createdAt: new Date(sale.createdAt),
+                        updatedAt: new Date(),
+                        createdBy: user?.id,
+                    }).onConflictDoUpdate({
+                        target: sales.id,
+                        set: {
+                            customerId: sale.customerId,
+                            totalAmount: String(sale.totalAmount),
+                            status: sale.status,
+                            updatedAt: new Date()
+                        }
                     })
 
-                    if (!existing) {
-                        await tx.insert(sales).values({
-                            id: sale.id,
-                            organizationId,
-                            customerId: sale.customerId,
-                            saleNumber: `SALE-${sale.id.substring(0, 8).toUpperCase()}`,
-                            subtotal: String(sale.totalAmount),
-                            totalAmount: String(sale.totalAmount),
-                            paidAmount: sale.status === 'COMPLETED' ? String(sale.totalAmount) : '0',
-                            status: sale.status === 'INVOICED' ? 'COMPLETED' : sale.status || 'COMPLETED',
-                            paymentStatus: sale.status === 'COMPLETED' ? 'PAID' : 'PENDING',
-                            createdAt: new Date(sale.createdAt),
-                            updatedAt: new Date(sale.updatedAt),
-                            createdBy: user?.id,
-                        })
-                        syncResults.sales.created++
-
-                        // Process Sale Items bundled with sale
-                        if (sale.lineItems) {
-                            for (const li of sale.lineItems) {
-                                await tx.insert(saleItems).values({
-                                    id: li.id,
-                                    saleId: sale.id,
-                                    itemId: li.itemId,
+                    if (sale.lineItems) {
+                        for (const li of sale.lineItems) {
+                            await tx.insert(saleItems).values({
+                                id: li.id,
+                                saleId: sale.id,
+                                itemId: li.itemId,
+                                quantity: String(li.quantity),
+                                unitPrice: String(li.unitPrice),
+                                total: String(li.totalPrice),
+                            }).onConflictDoUpdate({
+                                target: saleItems.id,
+                                set: {
                                     quantity: String(li.quantity),
                                     unitPrice: String(li.unitPrice),
-                                    total: String(li.totalPrice),
-                                    createdAt: new Date(sale.createdAt),
-                                })
-                                syncResults.saleItems.created++
-                            }
+                                    total: String(li.totalPrice)
+                                }
+                            })
                         }
                     }
+                    syncResults.sales.processed++
                 }
             }
 
             // 4. Process Expenses
-            if (changes.expenses?.created) {
-                for (const exp of changes.expenses.created) {
-                    const existing = await tx.query.expenses.findFirst({
-                        where: eq(expenses.id, exp.id)
-                    })
-
-                    if (!existing) {
-                        await tx.insert(expenses).values({
-                            id: exp.id,
-                            organizationId,
+            if (changes.expenses?.created || changes.expenses?.updated) {
+                const all = [...(changes.expenses.created || []), ...(changes.expenses.updated || [])]
+                for (const exp of all) {
+                    await tx.insert(expenses).values({
+                        id: exp.id,
+                        organizationId,
+                        categoryId: exp.categoryId,
+                        description: exp.description,
+                        amount: String(exp.amount),
+                        expenseDate: new Date(exp.date).toISOString().split('T')[0],
+                        updatedAt: new Date(),
+                        createdBy: user?.id,
+                    }).onConflictDoUpdate({
+                        target: expenses.id,
+                        set: {
                             categoryId: exp.categoryId,
                             description: exp.description,
                             amount: String(exp.amount),
-                            expenseDate: new Date(exp.date).toISOString().split('T')[0],
-                            createdAt: new Date(exp.date),
-                            updatedAt: new Date(exp.updatedAt || Date.now()),
-                            createdBy: user?.id,
-                        })
-                        syncResults.expenses.created++
-                    }
-                }
-            }
-
-            // 5. Process Quotations
-            if (changes.quotations?.created) {
-                for (const quote of changes.quotations.created) {
-                    const existing = await tx.query.quotations.findFirst({
-                        where: eq(quotations.id, quote.id)
-                    })
-
-                    if (!existing) {
-                        await tx.insert(quotations).values({
-                            id: quote.id,
-                            organizationId,
-                            customerId: quote.customerId,
-                            quotationNumber: `QUO-${quote.id.substring(0, 8).toUpperCase()}`,
-                            subtotal: String(quote.totalAmount),
-                            totalAmount: String(quote.totalAmount),
-                            status: 'DRAFT',
-                            createdAt: new Date(quote.createdAt),
-                            updatedAt: new Date(quote.updatedAt),
-                            createdBy: user?.id,
-                        })
-                        syncResults.quotations.created++
-
-                        if (quote.lineItems) {
-                            for (const li of quote.lineItems) {
-                                await tx.insert(quotationItems).values({
-                                    id: li.id,
-                                    quotationId: quote.id,
-                                    itemId: li.itemId,
-                                    quantity: String(li.quantity),
-                                    unitPrice: String(li.unitPrice),
-                                    total: String(li.totalPrice),
-                                })
-                            }
+                            updatedAt: new Date()
                         }
-                    }
-                }
-            }
-
-            // 6. Process Returns
-            if (changes.returns?.created) {
-                for (const ret of changes.returns.created) {
-                    const existing = await tx.query.returns.findFirst({
-                        where: eq(returns.id, ret.id)
                     })
-
-                    if (!existing) {
-                        await tx.insert(returns).values({
-                            id: ret.id,
-                            organizationId,
-                            saleId: ret.saleId,
-                            customerId: ret.customerId,
-                            returnNumber: `RET-${ret.id.substring(0, 8).toUpperCase()}`,
-                            totalAmount: String(ret.totalAmount),
-                            status: 'COMPLETED',
-                            refundStatus: 'REFUNDED',
-                            refundedAmount: String(ret.totalAmount),
-                            createdAt: new Date(ret.createdAt),
-                            updatedAt: new Date(ret.updatedAt),
-                            createdBy: user?.id,
-                        })
-                        syncResults.returns.created++
-
-                        if (ret.lineItems) {
-                            for (const li of ret.lineItems) {
-                                await tx.insert(returnItems).values({
-                                    id: li.id,
-                                    returnId: ret.id,
-                                    itemId: li.itemId,
-                                    quantity: li.quantity,
-                                    unitPrice: String(li.unitPrice),
-                                    total: String(li.totalPrice),
-                                    condition: 'GOOD',
-                                    restock: true,
-                                })
-                            }
-                        }
-                    }
+                    syncResults.expenses.processed++
                 }
             }
 
-            // 7. Process Payments (Receipts)
+            // 5. Process Payments
             if (changes.payments?.created) {
                 for (const pmt of changes.payments.created) {
-                    const existing = await tx.query.payments.findFirst({
-                        where: eq(payments.id, pmt.id)
-                    })
+                    await tx.insert(payments).values({
+                        id: pmt.id,
+                        organizationId,
+                        saleId: pmt.invoiceId,
+                        amount: String(pmt.amount),
+                        method: (pmt.paymentMethod || 'CASH').toUpperCase() as any,
+                        paymentDate: new Date(pmt.createdAt),
+                        createdAt: new Date(pmt.createdAt),
+                        createdBy: user?.id,
+                    }).onConflictDoNothing()
+                    
+                    await tx.update(sales)
+                            .set({ paymentStatus: 'PAID', paidAmount: String(pmt.amount), status: 'COMPLETED' })
+                            .where(eq(sales.id, pmt.invoiceId))
 
-                    if (!existing) {
-                        await tx.insert(payments).values({
-                            id: pmt.id,
-                            organizationId,
-                            saleId: pmt.invoiceId, // Mobile calls it invoiceId
-                            amount: String(pmt.amount),
-                            method: (pmt.paymentMethod || 'CASH').toUpperCase() as any,
-                            paymentDate: new Date(pmt.createdAt),
-                            createdAt: new Date(pmt.createdAt),
-                            createdBy: user?.id,
-                        })
-                        
-                        // Optionally update actual Sale record to PAID
-                        await tx.update(sales)
-                                .set({ paymentStatus: 'PAID', paidAmount: String(pmt.amount), status: 'COMPLETED' })
-                                .where(eq(sales.id, pmt.invoiceId))
-
-                        syncResults.payments.created++
-                    }
+                    syncResults.payments.processed++
                 }
             }
 
-            // 8. Process Leave Requests
-            if (changes.leaves?.created) {
-                for (const leave of changes.leaves.created) {
-                    const existing = await tx.query.leaveRequests.findFirst({
-                        where: eq(leaveRequests.id, leave.id)
-                    })
-
-                    if (!existing) {
-                        await tx.insert(leaveRequests).values({
-                            id: leave.id,
-                            organizationId,
-                            employeeId: leave.employeeId, // Mobile must provide this
-                            type: leave.type,
-                            startDate: new Date(leave.startDate),
-                            endDate: new Date(leave.endDate),
-                            reason: leave.reason,
-                            status: 'PENDING',
-                            createdAt: new Date(),
-                            updatedAt: new Date(),
-                        })
-                        syncResults.leaves.created++
-                    }
+            // 6. Process Bank Transactions
+            if (changes.bankTransactions?.created) {
+                for (const bt of changes.bankTransactions.created) {
+                    await tx.insert(bankTransactions).values({
+                        id: bt.id,
+                        organizationId,
+                        accountId: bt.accountId,
+                        type: bt.type as any,
+                        amount: String(bt.amount),
+                        transactionDate: new Date(bt.date),
+                        description: bt.description,
+                        referenceType: bt.referenceType as any,
+                        referenceId: bt.referenceId,
+                        createdBy: user?.id,
+                        createdAt: new Date(bt.date)
+                    }).onConflictDoNothing()
+                    syncResults.bankTransactions.processed++
                 }
             }
 
-            // 9. Process Suppliers
-            if (changes.suppliers?.created) {
-                for (const sup of changes.suppliers.created) {
-                    const existing = await tx.query.stakeholders.findFirst({
-                        where: eq(stakeholders.id, sup.id)
-                    })
-
-                    if (!existing) {
-                        await tx.insert(stakeholders).values({
-                            id: sup.id,
-                            organizationId,
-                            type: 'SUPPLIER',
-                            fullName: sup.fullName,
-                            email: sup.email,
-                            phone: sup.phone,
-                            address: sup.address,
-                            createdAt: new Date(),
-                            updatedAt: new Date(),
-                        })
-                        syncResults.suppliers.created++
-                    }
+            // 7. Process Stock Movements
+            if (changes.stockMovements?.created) {
+                for (const sm of changes.stockMovements.created) {
+                    await tx.insert(stockMovements).values({
+                        id: sm.id,
+                        organizationId,
+                        itemId: sm.itemId,
+                        type: sm.type as any,
+                        quantity: sm.quantity,
+                        referenceType: sm.referenceType,
+                        referenceId: sm.referenceId,
+                        notes: sm.notes,
+                        createdBy: user?.id,
+                        createdAt: new Date(sm.createdAt)
+                    }).onConflictDoNothing()
+                    syncResults.stockMovements.processed++
                 }
             }
 
-            // 10. Process Purchases
-            if (changes.purchases?.created) {
-                for (const pur of changes.purchases.created) {
-                    const existing = await tx.query.purchaseOrders.findFirst({
-                        where: eq(purchaseOrders.id, pur.id)
-                    })
+            // 8. Process Deletions (Generic)
+            const entities = [
+                { data: changes.items?.deleted, table: items },
+                { data: changes.sales?.deleted, table: sales },
+                { data: changes.customers?.deleted, table: stakeholders },
+                { data: changes.expenses?.deleted, table: expenses },
+                { data: changes.quotations?.deleted, table: quotations },
+                { data: changes.returns?.deleted, table: returns },
+                { data: changes.purchases?.deleted, table: purchaseOrders },
+                { data: changes.bankTransactions?.deleted, table: bankTransactions },
+                { data: changes.stockMovements?.deleted, table: stockMovements }
+            ]
 
-                    if (!existing) {
-                        await tx.insert(purchaseOrders).values({
-                            id: pur.id,
-                            organizationId,
-                            supplierId: pur.supplierId,
-                            orderNumber: `PUR-${pur.id.substring(0, 8).toUpperCase()}`,
-                            totalAmount: String(pur.totalAmount),
-                            status: pur.status || 'COMPLETED',
-                            createdAt: new Date(pur.createdAt),
-                            updatedAt: new Date(pur.updatedAt),
-                            createdBy: user?.id,
-                        })
-                        syncResults.purchases.created++
-
-                        if (pur.lineItems) {
-                            for (const li of pur.lineItems) {
-                                await tx.insert(purchaseOrderLines).values({
-                                    id: li.id,
-                                    purchaseOrderId: pur.id,
-                                    itemId: li.itemId,
-                                    quantity: li.quantity,
-                                    unitCost: String(li.unitPrice),
-                                    totalCost: String(li.totalPrice),
-                                })
-                            }
-                        }
-                    }
+            for (const entity of entities) {
+                if (entity.data && entity.data.length > 0) {
+                    // Industrial standard: Soft Delete
+                    await tx.update(entity.table)
+                            .set({ isDeleted: true, updatedAt: new Date() })
+                            .where(and(
+                                eq(entity.table.organizationId, organizationId),
+                                sql`${entity.table.id} IN ${entity.data}`
+                            ))
                 }
             }
 

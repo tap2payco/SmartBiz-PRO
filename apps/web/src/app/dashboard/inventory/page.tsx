@@ -181,73 +181,78 @@ export default function InventoryPage() {
     })
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage your products and stock</p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                    {selectedItemIds.size > 0 && (
-                        <Button
-                            variant="default"
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => setPrintLabelsDialogOpen(true)}
-                        >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print Labels ({selectedItemIds.size})
+        <div className="space-y-8 animate-in fade-in duration-700">
+            {/* Premium Header */}
+            <div className="glass rounded-3xl p-8 relative overflow-hidden border border-white/20">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">Inventory</h1>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium">Real-time stock intelligence & management</p>
+                    </div>
+                    <div className="flex gap-3 flex-wrap">
+                        {selectedItemIds.size > 0 && (
+                            <Button
+                                variant="default"
+                                className="bg-emerald-600 hover:bg-emerald-700 rounded-2xl px-6 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                                onClick={() => setPrintLabelsDialogOpen(true)}
+                            >
+                                <Printer className="h-4 w-4 mr-2" />
+                                Print Labels ({selectedItemIds.size})
+                            </Button>
+                        )}
+                        <Button variant="outline" className="rounded-2xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => { setSelectedItem(null); setTransferDialogOpen(true) }}>
+                            <ArrowRightLeft className="h-4 w-4 mr-2" />
+                            Transfer
                         </Button>
-                    )}
-                    <Button variant="outline" onClick={() => { setSelectedItem(null); setTransferDialogOpen(true) }}>
-                        <ArrowRightLeft className="h-4 w-4 mr-2" />
-                        Transfer Stock
-                    </Button>
-                    <Link href="/dashboard/inventory/categories">
-                        <Button variant="outline">
-                            <Layers className="h-4 w-4 mr-2" />
-                            Manage Categories
-                        </Button>
-                    </Link>
-                    <ItemDialog mode="create" />
+                        <Link href="/dashboard/inventory/categories">
+                            <Button variant="outline" className="rounded-2xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <Layers className="h-4 w-4 mr-2" />
+                                Categories
+                            </Button>
+                        </Link>
+                        <ItemDialog mode="create" />
+                    </div>
                 </div>
             </div>
 
-            {/* Filters & Search */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative flex gap-2">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            {/* Filters & Search - Premium Row */}
+            <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex-1 flex gap-3">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                         <input
                             type="text"
                             placeholder="Search by name, SKU, or barcode..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full pl-12 pr-4 py-3 border-2 border-gray-100 dark:border-gray-800 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-all shadow-sm"
                         />
                     </div>
-                    <Button variant="outline" size="icon" onClick={() => setIsScannerOpen(true)}>
-                        <Camera className="h-4 w-4" />
+                    <Button variant="outline" size="icon" className="rounded-2xl h-[52px] w-[52px] border-2" onClick={() => setIsScannerOpen(true)}>
+                        <Camera className="h-5 w-5" />
                     </Button>
                 </div>
-                <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                
+                <div className="flex bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
                     <button
                         onClick={() => handleFilterChange('all')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filter === 'all'
-                            ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        className={`px-6 py-2 text-sm font-bold rounded-xl transition-all ${filter === 'all'
+                            ? 'bg-white dark:bg-gray-700 text-primary dark:text-blue-400 shadow-md ring-1 ring-black/5'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                             }`}
                     >
-                        All Items
+                        Master Inventory
                     </button>
                     <button
                         onClick={() => handleFilterChange('low-stock')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2 ${filter === 'low-stock'
-                            ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        className={`px-6 py-2 text-sm font-bold rounded-xl transition-all flex items-center gap-2 ${filter === 'low-stock'
+                            ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-md ring-1 ring-black/5'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                             }`}
                     >
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        Low Stock
+                        <AlertTriangle className="h-4 w-4" />
+                        Stock Alerts
                     </button>
                 </div>
             </div>

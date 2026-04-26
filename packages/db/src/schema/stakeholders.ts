@@ -26,6 +26,7 @@ export const stakeholders = pgTable('stakeholders', {
     paymentTerms: integer('payment_terms'), // days
     loyaltyPoints: decimal('loyalty_points', { precision: 15, scale: 2 }).default('0'),
     isActive: boolean('is_active').notNull().default(true),
+    isDeleted: boolean('is_deleted').notNull().default(false),
     customFields: jsonb('custom_fields'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),

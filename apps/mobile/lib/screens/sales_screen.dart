@@ -199,36 +199,57 @@ class _SalesScreenState extends State<SalesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Sales / POS'),
+        title: const Text('Point of Sale', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -1)),
         centerTitle: false,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: const Color(0xFF1E293B),
         actions: [
           if (_selectedCustomer != null)
-            Chip(
-              label: Text(_selectedCustomer!['full_name'] as String),
-              onDeleted: () => setState(() => _selectedCustomer = null),
-              deleteIconColor: Colors.red,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: ActionChip(
+                label: Text(_selectedCustomer!['full_name'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                onPressed: _showCustomerSelector,
+                backgroundColor: const Color(0xFF2563EB).withOpacity(0.08),
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
             ),
           IconButton(
-            icon: Icon(_selectedCustomer != null ? Icons.person : Icons.person_add_outlined),
+            icon: Icon(_selectedCustomer != null ? Icons.person : Icons.person_add_outlined, color: const Color(0xFF2563EB)),
             onPressed: _showCustomerSelector,
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          // Premium Search Bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
             child: TextField(
               onChanged: (v) => setState(() => _search = v),
               decoration: InputDecoration(
-                hintText: 'Search products...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF2563EB)),
-                  onPressed: _handleScan,
-                  tooltip: 'Scan Barcode',
+                hintText: 'Search products by name or SKU...',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                filled: true,
+                fillColor: const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                suffixIcon: Container(
+                  margin: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: const Color(0xFF2563EB), borderRadius: BorderRadius.circular(12)),
+                  child: IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 20),
+                    onPressed: _handleScan,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
                 ),
               ),
             ),
@@ -237,22 +258,47 @@ class _SalesScreenState extends State<SalesScreen> {
           // Product list
           Expanded(
             child: _filteredItems.isEmpty
-                ? Center(child: Text('No products found', style: TextStyle(color: Colors.grey.shade400)))
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Text('No products available', style: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                     itemCount: _filteredItems.length,
                     itemBuilder: (_, i) {
                       final item = _filteredItems[i];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                        ),
                         child: ListTile(
-                          title: Text(item['name'] as String,
-                              style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text('TZS ${_currencyFormat.format(item['selling_price'])}',
-                              style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.add_circle, color: Color(0xFF2563EB), size: 32),
-                            onPressed: () => _addToCart(item),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                            child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF64748B)),
+                          ),
+                          title: Text(item['name'] as String, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text('TZS ${_currencyFormat.format(item['selling_price'])}', style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w800, fontSize: 15)),
+                          ),
+                          trailing: Container(
+                            decoration: BoxDecoration(color: const Color(0xFF2563EB).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                            child: IconButton(
+                              icon: const Icon(Icons.add, color: Color(0xFF2563EB)),
+                              onPressed: () => _addToCart(item),
+                            ),
                           ),
                         ),
                       );
@@ -269,11 +315,11 @@ class _SalesScreenState extends State<SalesScreen> {
 
   Widget _buildCartSummary() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, -4))],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, -8))],
       ),
       child: Column(
         children: [
@@ -281,63 +327,62 @@ class _SalesScreenState extends State<SalesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [
-                Text('Quotation', style: TextStyle(color: Colors.grey.shade700)),
-                const SizedBox(width: 8),
-                Switch.adaptive(
-                  value: _isQuotation,
-                  onChanged: (v) => setState(() => _isQuotation = v),
-                ),
-              ]),
-              TextButton(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  const Text('Quotation', style: TextStyle(color: Color(0xFF475569), fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 24,
+                    child: Switch.adaptive(
+                      value: _isQuotation,
+                      activeColor: const Color(0xFF2563EB),
+                      onChanged: (v) => setState(() => _isQuotation = v),
+                    ),
+                  ),
+                ]),
+              ),
+              TextButton.icon(
                 onPressed: () => setState(() => _cart.clear()),
-                child: const Text('Clear', style: TextStyle(color: Colors.red)),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Clear Cart'),
+                style: TextButton.styleFrom(foregroundColor: Colors.red.shade600),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-
-          // Payment method selector (hidden for quotations)
-          if (!_isQuotation)
-            Row(
-              children: [
-                Text('Pay via:', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'CASH', label: Text('Cash', style: TextStyle(fontSize: 11))),
-                      ButtonSegment(value: 'M-PESA', label: Text('M-Pesa', style: TextStyle(fontSize: 11))),
-                      ButtonSegment(value: 'BANK', label: Text('Bank', style: TextStyle(fontSize: 11))),
-                      ButtonSegment(value: 'CARD', label: Text('Card', style: TextStyle(fontSize: 11))),
-                    ],
-                    selected: {_paymentMethod},
-                    onSelectionChanged: (v) => setState(() => _paymentMethod = v.first),
-                    style: ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
 
           // Total + Checkout
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Total (${_cart.length} items)',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-                Text('TZS ${_currencyFormat.format(_total)}',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text('PAYABLE TOTAL', style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                Text('TZS ${_currencyFormat.format(_total)}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
               ]),
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _handleCheckout,
-                  child: Text(_isQuotation ? 'Create Quote' : 'Checkout'),
+              const SizedBox(width: 16),
+              Expanded(
+                child: SizedBox(
+                  height: 58,
+                  child: ElevatedButton(
+                    onPressed: _handleCheckout,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      shadowColor: const Color(0xFF2563EB).withOpacity(0.4),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_isQuotation ? 'CREATE QUOTE' : 'CHECKOUT', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded, size: 18),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],

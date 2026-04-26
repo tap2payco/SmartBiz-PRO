@@ -15,95 +15,106 @@ type Variables = {
     organizationId: string | null;
 };
 
-export const app = new Hono<{ Variables: Variables }>();
+import { requestId } from 'hono/request-id';
+import { timing } from 'hono/timing';
 
 // Middleware
-// 1. CORS MUST be first to handle OPTIONS preflight
+// 1. Request ID and Timing (Industrial traceability)
+app.use('*', requestId());
+app.use('*', timing());
+
+// 1.5 Rate Limiting (Industrial protection)
+const rateLimitMap = new Map<string, { count: number, reset: number }>();
+app.use('*', async (c, next) => {
+    const ip = c.req.header('x-forwarded-for') || 'local';
+    const now = Date.now();
+    const limit = 100; // 100 requests per minute
+    const window = 60 * 1000;
+
+    const record = rateLimitMap.get(ip) || { count: 0, reset: now + window };
+    
+    if (now > record.reset) {
+        record.count = 1;
+        record.reset = now + window;
+    } else {
+        record.count++;
+    }
+    
+    rateLimitMap.set(ip, record);
+
+    if (record.count > limit) {
+        return c.json({ success: false, error: 'Too Many Requests', message: 'Rate limit exceeded' }, 429);
+    }
+    
+    await next();
+});
+
+// 2. CORS MUST be first to handle OPTIONS preflight
 app.use('*', cors({
     origin: (origin) => {
-        // Allow Vercel, Render, and local development
+        if (!origin) return 'https://smartbiz-pro.onrender.com';
         if (origin === 'https://smart-biz-pro-web.vercel.app' ||
             origin?.endsWith('.vercel.app') ||
             origin?.endsWith('.onrender.com') ||
             origin?.includes('localhost')) {
             return origin;
         }
-        return 'https://smartbiz-pro.onrender.com'; // Default fallback
+        return 'https://smartbiz-pro.onrender.com';
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-ID'],
+    exposeHeaders: ['Content-Length', 'X-Request-ID'],
     maxAge: 600,
     credentials: true,
 }));
 
-// 2. Handle OPTIONS globally to ensure preflight success immediately
-app.options('*', (c) => {
-    return c.body(null, 204);
+// 3. Handle OPTIONS globally
+app.options('*', (c) => c.body(null, 204));
+
+// 4. Industrial Logger & Response Wrapper
+app.use('*', async (c, next) => {
+    const start = Date.now();
+    await next();
+    const ms = Date.now() - start;
+    const reqId = c.get('requestId');
+    
+    // Log the request
+    console.log(`[${new Date().toISOString()}] ${reqId} ${c.req.method} ${c.req.url} - ${c.res.status} (${ms}ms)`);
+
+    // Standardize JSON Responses (Industrial Envelope)
+    if (c.res.status < 400 && c.res.headers.get('Content-Type')?.includes('application/json')) {
+        const body = await c.res.json();
+        return c.json({
+            success: true,
+            data: body,
+            requestId: reqId,
+            timestamp: new Date().toISOString()
+        }, c.res.status as any);
+    }
 });
 
-app.use('*', logger());
 app.use('*', prettyJSON());
 
 // Health check
-app.get('/', (c) => {
-    return c.json({
-        status: 'ok',
-        message: 'SmartBiz Pro API is running',
-        version: '1.0.0',
-        timestamp: new Date().toISOString(),
-    });
-});
-
-app.get('/health', (c) => {
-    return c.json({
-        status: 'healthy',
-        uptime: process.uptime(),
-    });
-});
-
-app.get('/debug-env', (c) => {
-    const keys = [
-        'DATABASE_URL',
-        'NEXT_PUBLIC_SUPABASE_URL',
-        'SUPABASE_SERVICE_ROLE_KEY',
-        'NEXT_PUBLIC_API_URL',
-        'NODE_ENV'
-    ];
-
-    const status: Record<string, boolean> = {};
-    keys.forEach(key => {
-        status[key] = !!process.env[key];
-    });
-
-    return c.json({
-        env_status: status,
-        vercel_region: process.env.VERCEL_REGION || 'local'
-    });
-});
+app.get('/', (c) => c.json({ status: 'ok', message: 'SmartBiz Pro API Industrial v1', version: '1.2.0' }));
+app.get('/health', (c) => c.json({ status: 'healthy', uptime: process.uptime() }));
 
 // Global Error Handler
 app.onError((err, c) => {
     console.error('GLOBAL ERROR:', err);
-
-    const isConfigError = err.message.includes('configuration missing');
-
+    const status = (err as any).status || 500;
     return c.json({
-        error: isConfigError ? 'Configuration Error' : 'Internal Server Error',
+        success: false,
+        error: err.name || 'Internal Server Error',
         message: err.message,
-        code: isConfigError ? 'CONFIG_MISSING' : 'INTERNAL_ERROR',
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    }, 500);
+        requestId: c.get('requestId'),
+        code: (err as any).code || 'INTERNAL_ERROR'
+    }, status);
 });
 
-// Auth Routes
+// Import Routes
 import auth from './routes/auth';
-
-// Apply auth middleware to all routes except public health check
-app.use('/auth', authMiddleware);
-app.use('/auth/*', authMiddleware);
-app.route('/auth', auth);
-
+import organizations from './routes/organizations';
 import stakeholders from './routes/stakeholders';
 import items from './routes/items';
 import categories from './routes/categories';
@@ -116,93 +127,44 @@ import finance from './routes/finance';
 import expensesRoute from './routes/expenses';
 import banking from './routes/banking';
 import returns from './routes/returns';
+import quotations from './routes/quotations';
+import transfers from './routes/transfers';
 import projects from './routes/projects';
+import hr from './routes/hr';
+import payroll from './routes/payroll';
+import sync from './routes/sync';
 
-// Mount routes
+// Public Routes
 app.route('/auth', auth);
 
-app.use('/organizations', authMiddleware);
-app.use('/organizations/*', authMiddleware);
-app.route('/organizations', organizations);
+// Protected Routes (Industrial Multi-Tenancy)
+const protectedRoutes = [
+    { path: '/organizations', route: organizations },
+    { path: '/stakeholders', route: stakeholders },
+    { path: '/items', route: items },
+    { path: '/categories', route: categories },
+    { path: '/stock-movements', route: stockMovements },
+    { path: '/sales', route: sales },
+    { path: '/reports', route: reports },
+    { path: '/locations', route: locations },
+    { path: '/purchases', route: purchases },
+    { path: '/finance', route: finance },
+    { path: '/expenses', route: expensesRoute },
+    { path: '/banking', route: banking },
+    { path: '/returns', route: returns },
+    { path: '/quotations', route: quotations },
+    { path: '/transfers', route: transfers },
+    { path: '/projects', route: projects },
+    { path: '/hr', route: hr },
+    { path: '/payroll', route: payroll },
+    { path: '/sync', route: sync }
+];
 
-app.use('/stakeholders', authMiddleware);
-app.use('/stakeholders/*', authMiddleware);
-app.route('/stakeholders', stakeholders);
-
-app.use('/items', authMiddleware);
-app.use('/items/*', authMiddleware);
-app.route('/items', items);
-
-app.use('/categories', authMiddleware);
-app.use('/categories/*', authMiddleware);
-app.route('/categories', categories);
-
-app.use('/stock-movements', authMiddleware);
-app.use('/stock-movements/*', authMiddleware);
-app.route('/stock-movements', stockMovements);
-
-app.use('/sales', authMiddleware);
-app.use('/sales/*', authMiddleware);
-app.route('/sales', sales);
-
-app.use('/reports', authMiddleware);
-app.use('/reports/*', authMiddleware);
-app.route('/reports', reports);
-
-app.use('/locations', authMiddleware);
-app.use('/locations/*', authMiddleware);
-app.route('/locations', locations);
-
-app.use('/purchases', authMiddleware);
-app.use('/purchases/*', authMiddleware);
-app.route('/purchases', purchases);
-
-app.use('/finance', authMiddleware);
-app.use('/finance/*', authMiddleware);
-app.route('/finance', finance);
-
-app.use('/expenses', authMiddleware);
-app.use('/expenses/*', authMiddleware);
-app.route('/expenses', expensesRoute);
-
-app.use('/banking', authMiddleware);
-app.use('/banking/*', authMiddleware);
-app.route('/banking', banking);
-
-app.use('/returns', authMiddleware);
-app.use('/returns/*', authMiddleware);
-app.route('/returns', returns);
-
-import quotations from './routes/quotations';
-app.use('/quotations', authMiddleware);
-app.use('/quotations/*', authMiddleware);
-app.route('/quotations', quotations);
-
-import transfers from './routes/transfers';
-app.use('/transfers', authMiddleware);
-app.use('/transfers/*', authMiddleware);
-app.route('/transfers', transfers);
-
-app.use('/projects', authMiddleware);
-app.use('/projects/*', authMiddleware);
-app.route('/projects', projects);
-
-import hr from './routes/hr';
-app.use('/hr', authMiddleware);
-app.use('/hr/*', authMiddleware);
-app.route('/hr', hr);
-
-import payroll from './routes/payroll';
-app.use('/payroll', authMiddleware);
-app.use('/payroll/*', authMiddleware);
-app.route('/payroll', payroll);
-
-app.route('/transfers', transfers);
-
-import sync from './routes/sync';
-app.use('/sync', authMiddleware);
-app.use('/sync/*', authMiddleware);
-app.route('/sync', sync);
+protectedRoutes.forEach(({ path, route }) => {
+    app.use(`${path}`, authMiddleware);
+    app.use(`${path}/*`, authMiddleware);
+    app.route(path, route);
+});
 
 import { serve } from '@hono/node-server'
 

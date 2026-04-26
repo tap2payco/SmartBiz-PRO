@@ -77,47 +77,55 @@ export default function SalesHistoryPage() {
     }
 
     return (
-        <div className="space-y-6 pb-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sales History</h1>
-                    <p className="text-gray-500 dark:text-gray-400">View and manage all transactions.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button onClick={() => setIsInvoiceDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Invoice
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={fetchSales} disabled={isLoading}>
-                        <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                        Refresh
-                    </Button>
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                    </Button>
+    return (
+        <div className="space-y-8 pb-10 animate-in fade-in duration-700">
+            {/* Premium Header */}
+            <div className="glass rounded-3xl p-8 relative overflow-hidden border border-white/20">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">Sales History</h1>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium">End-to-end transaction intelligence & audit trail</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Button onClick={() => setIsInvoiceDialogOpen(true)} className="bg-primary hover:bg-primary/90 rounded-2xl px-6 shadow-lg shadow-primary/20 transition-all active:scale-95">
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Invoice
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={fetchSales} disabled={isLoading} className="rounded-xl border-2">
+                            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </Button>
+                        <Button variant="outline" size="sm" className="rounded-xl border-2">
+                            <Download className="h-4 w-4 mr-2" />
+                            Export
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            {/* Quick Stats */}
+            {/* Quick Stats - Premium Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard
-                    title="Total Revenue"
+                    title="Gross Revenue"
                     value={`TZS ${totalSalesAmount.toLocaleString()}`}
                     icon={CheckCircle2}
-                    color="text-green-600 bg-green-50 dark:bg-green-900/20"
+                    color="text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20"
+                    gradient="from-emerald-50 to-white dark:from-emerald-900/10 dark:to-gray-800"
                 />
                 <StatCard
-                    title="Total Transactions"
+                    title="Transaction Volume"
                     value={totalTransactions.toString()}
                     icon={FileText}
                     color="text-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                    gradient="from-blue-50 to-white dark:from-blue-900/10 dark:to-gray-800"
                 />
                 <StatCard
-                    title="Pending Payments"
+                    title="Pending Settlements"
                     value={pendingSales.toString()}
                     icon={Clock}
                     color="text-amber-600 bg-amber-50 dark:bg-amber-900/20"
+                    gradient="from-amber-50 to-white dark:from-amber-900/10 dark:to-gray-800"
                 />
             </div>
 

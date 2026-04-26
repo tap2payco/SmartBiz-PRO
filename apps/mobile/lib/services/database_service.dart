@@ -15,7 +15,7 @@ class DatabaseService {
 
     _db = await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE IF NOT EXISTS items (
@@ -30,16 +30,17 @@ class DatabaseService {
             is_active INTEGER DEFAULT 1,
             stock_level INTEGER DEFAULT 0,
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
 
-        // ... existing tables ...
         await db.execute('''
           CREATE TABLE IF NOT EXISTS categories (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             description TEXT,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -53,6 +54,7 @@ class DatabaseService {
             address TEXT,
             loyalty_points INTEGER DEFAULT 0,
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -65,6 +67,7 @@ class DatabaseService {
             status TEXT DEFAULT 'COMPLETED',
             payment_type TEXT DEFAULT 'CASH',
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             created_at INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
@@ -75,9 +78,10 @@ class DatabaseService {
             id TEXT PRIMARY KEY,
             sale_id TEXT NOT NULL,
             item_id TEXT NOT NULL,
-            quantity INTEGER DEFAULT 0,
+            quantity REAL DEFAULT 0,
             unit_price REAL DEFAULT 0,
             total_price REAL DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
           )
         ''');
@@ -91,6 +95,7 @@ class DatabaseService {
             receipt_url TEXT,
             created_at INTEGER DEFAULT 0,
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             FOREIGN KEY (invoice_id) REFERENCES sales (id) ON DELETE CASCADE
           )
         ''');
@@ -101,6 +106,7 @@ class DatabaseService {
             name TEXT NOT NULL,
             description TEXT,
             status TEXT DEFAULT 'ACTIVE',
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -109,6 +115,7 @@ class DatabaseService {
           CREATE TABLE IF NOT EXISTS expense_categories (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -122,6 +129,7 @@ class DatabaseService {
             category_id TEXT,
             receipt_path TEXT,
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0,
             FOREIGN KEY (category_id) REFERENCES expense_categories (id)
           )
@@ -137,6 +145,7 @@ class DatabaseService {
             reason TEXT,
             status TEXT DEFAULT 'PENDING',
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -151,6 +160,7 @@ class DatabaseService {
             pdf_url TEXT,
             status TEXT DEFAULT 'PAID',
             is_synced INTEGER DEFAULT 1,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -163,6 +173,7 @@ class DatabaseService {
             phone TEXT,
             address TEXT,
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
         ''');
@@ -175,6 +186,7 @@ class DatabaseService {
             status TEXT DEFAULT 'COMPLETED',
             payment_type TEXT DEFAULT 'CASH',
             is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             created_at INTEGER DEFAULT 0,
             updated_at INTEGER DEFAULT 0
           )
@@ -185,10 +197,56 @@ class DatabaseService {
             id TEXT PRIMARY KEY,
             purchase_id TEXT NOT NULL,
             item_id TEXT NOT NULL,
-            quantity INTEGER DEFAULT 0,
+            quantity REAL DEFAULT 0,
             unit_price REAL DEFAULT 0,
             total_price REAL DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
             FOREIGN KEY (purchase_id) REFERENCES purchases (id) ON DELETE CASCADE
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS bank_accounts (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            currency TEXT DEFAULT 'TZS',
+            balance REAL DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            is_synced INTEGER DEFAULT 1,
+            is_deleted INTEGER DEFAULT 0,
+            updated_at INTEGER DEFAULT 0
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS bank_transactions (
+            id TEXT PRIMARY KEY,
+            account_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            date INTEGER NOT NULL,
+            description TEXT,
+            reference_type TEXT,
+            reference_id TEXT,
+            is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
+            FOREIGN KEY (account_id) REFERENCES bank_accounts (id)
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS stock_movements (
+            id TEXT PRIMARY KEY,
+            item_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            quantity REAL NOT NULL,
+            reference_type TEXT,
+            reference_id TEXT,
+            notes TEXT,
+            is_synced INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT 0
           )
         ''');
 
@@ -200,30 +258,67 @@ class DatabaseService {
         ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('CREATE TABLE IF NOT EXISTS sale_items (id TEXT PRIMARY KEY, sale_id TEXT, item_id TEXT, quantity INTEGER, unit_price REAL, total_price REAL)');
-          await db.execute('CREATE TABLE IF NOT EXISTS invoice_payments (id TEXT PRIMARY KEY, invoice_id TEXT, amount REAL, payment_method TEXT, receipt_url TEXT, created_at INTEGER)');
-          await db.execute('CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, name TEXT, description TEXT, status TEXT, updated_at INTEGER)');
-        }
-        if (oldVersion < 3) {
-          await db.execute('CREATE TABLE IF NOT EXISTS expense_categories (id TEXT PRIMARY KEY, name TEXT, updated_at INTEGER)');
-          await db.execute('CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, description TEXT, amount REAL, date INTEGER, category_id TEXT, receipt_path TEXT, updated_at INTEGER)');
-        }
-        if (oldVersion < 4) {
-          try {
-            await db.execute('ALTER TABLE sales ADD COLUMN is_synced INTEGER DEFAULT 0');
-            await db.execute('ALTER TABLE expenses ADD COLUMN is_synced INTEGER DEFAULT 0');
-            await db.execute('ALTER TABLE customers ADD COLUMN is_synced INTEGER DEFAULT 0');
-          } catch (e) {
-            // Column may already exist
+        if (oldVersion < 9) {
+          final tables = [
+            'items', 'categories', 'customers', 'sales', 'sale_items', 
+            'invoice_payments', 'projects', 'expense_categories', 
+            'expenses', 'hr_leaves', 'payroll_payslips', 'suppliers', 
+            'purchases', 'purchase_items'
+          ];
+          
+          for (final table in tables) {
+            try {
+              await db.execute('ALTER TABLE $table ADD COLUMN is_deleted INTEGER DEFAULT 0');
+            } catch (e) {
+              // Column might already exist
+            }
           }
-        }
-        if (oldVersion < 5) {
-          try {
-            await db.execute('ALTER TABLE items ADD COLUMN is_synced INTEGER DEFAULT 0');
-          } catch (e) {
-            // Column may already exist
-          }
+
+          // Create new tables for V9
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS bank_accounts (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              type TEXT NOT NULL,
+              currency TEXT DEFAULT 'TZS',
+              balance REAL DEFAULT 0,
+              is_active INTEGER DEFAULT 1,
+              is_synced INTEGER DEFAULT 1,
+              is_deleted INTEGER DEFAULT 0,
+              updated_at INTEGER DEFAULT 0
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS bank_transactions (
+              id TEXT PRIMARY KEY,
+              account_id TEXT NOT NULL,
+              type TEXT NOT NULL,
+              amount REAL NOT NULL,
+              date INTEGER NOT NULL,
+              description TEXT,
+              reference_type TEXT,
+              reference_id TEXT,
+              is_synced INTEGER DEFAULT 0,
+              is_deleted INTEGER DEFAULT 0,
+              FOREIGN KEY (account_id) REFERENCES bank_accounts (id)
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS stock_movements (
+              id TEXT PRIMARY KEY,
+              item_id TEXT NOT NULL,
+              type TEXT NOT NULL,
+              quantity REAL NOT NULL,
+              reference_type TEXT,
+              reference_id TEXT,
+              notes TEXT,
+              is_synced INTEGER DEFAULT 0,
+              is_deleted INTEGER DEFAULT 0,
+              created_at INTEGER DEFAULT 0
+            )
+          ''');
         }
       },
     );
@@ -236,7 +331,35 @@ class DatabaseService {
   }
 
   Future<void> insertExpense(Map<String, dynamic> expense) async {
-    await db.insert('expenses', expense, conflictAlgorithm: ConflictAlgorithm.replace);
+    final data = Map<String, dynamic>.from(expense);
+    data['is_synced'] = 0;
+    await db.insert('expenses', data, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  // Banking
+  Future<List<Map<String, dynamic>>> getBankAccounts() async {
+    return await db.query('bank_accounts', where: 'is_deleted = 0', orderBy: 'name ASC');
+  }
+
+  Future<List<Map<String, dynamic>>> getBankTransactions(String accountId) async {
+    return await db.query('bank_transactions', where: 'account_id = ? AND is_deleted = 0', whereArgs: [accountId], orderBy: 'date DESC');
+  }
+
+  Future<void> insertBankTransaction(Map<String, dynamic> tx) async {
+    final data = Map<String, dynamic>.from(tx);
+    data['is_synced'] = 0;
+    await db.insert('bank_transactions', data, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  // Inventory
+  Future<List<Map<String, dynamic>>> getStockMovements(String itemId) async {
+    return await db.query('stock_movements', where: 'item_id = ? AND is_deleted = 0', whereArgs: [itemId], orderBy: 'created_at DESC');
+  }
+
+  Future<void> insertStockMovement(Map<String, dynamic> sm) async {
+    final data = Map<String, dynamic>.from(sm);
+    data['is_synced'] = 0;
+    await db.insert('stock_movements', data, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   // Items
@@ -269,7 +392,9 @@ class DatabaseService {
   }
 
   Future<void> insertCustomer(Map<String, dynamic> customer) async {
-    await db.insert('customers', customer, conflictAlgorithm: ConflictAlgorithm.replace);
+    final data = Map<String, dynamic>.from(customer);
+    data['is_synced'] = 0;
+    await db.insert('customers', data, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   // Sales & Items
@@ -394,10 +519,36 @@ class DatabaseService {
     await batch.commit(noResult: true);
   }
 
+  Future<void> upsertBankAccounts(List<Map<String, dynamic>> accounts) async {
+    final batch = db.batch();
+    for (var acc in accounts) {
+      batch.insert('bank_accounts', acc, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertBankTransactions(List<Map<String, dynamic>> txs) async {
+    final batch = db.batch();
+    for (var tx in txs) {
+      batch.insert('bank_transactions', tx, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertStockMovements(List<Map<String, dynamic>> movements) async {
+    final batch = db.batch();
+    for (var sm in movements) {
+      batch.insert('stock_movements', sm, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
   // Generic Insert
   Future<bool> insertItem(Map<String, dynamic> item) async {
     try {
-      await db.insert('items', item, conflictAlgorithm: ConflictAlgorithm.replace);
+      final data = Map<String, dynamic>.from(item);
+      data['is_synced'] = 0;
+      await db.insert('items', data, conflictAlgorithm: ConflictAlgorithm.replace);
       return true;
     } catch (e) {
       return false;
@@ -406,7 +557,9 @@ class DatabaseService {
 
   Future<bool> insertSale(Map<String, dynamic> sale) async {
     try {
-      await db.insert('sales', sale, conflictAlgorithm: ConflictAlgorithm.replace);
+      final data = Map<String, dynamic>.from(sale);
+      data['is_synced'] = 0;
+      await db.insert('sales', data, conflictAlgorithm: ConflictAlgorithm.replace);
       return true;
     } catch (e) {
       return false;

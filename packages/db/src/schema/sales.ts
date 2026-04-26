@@ -28,6 +28,7 @@ export const sales = pgTable('sales', {
     paidAmount: decimal('paid_amount', { precision: 15, scale: 2 }).notNull().default('0'),
 
     notes: text('notes'),
+    isDeleted: boolean('is_deleted').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
     createdBy: uuid('created_by'),
@@ -71,6 +72,7 @@ export const payments = pgTable('payments', {
     notes: text('notes'),
 
     paymentDate: timestamp('payment_date').notNull().defaultNow(),
+    isDeleted: boolean('is_deleted').notNull().default(false),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     createdBy: uuid('created_by'),
 }, (table) => {

@@ -1,15 +1,10 @@
-
 import { db } from './index'
 import { SyncStatus } from './types'
 
-// Key for storing the last sync timestamp in localStorage
 const SYNC_TIMESTAMP_KEY = 'smartbiz_last_pulled_at'
 
 export async function processOutbox(getToken: () => Promise<string | null>) {
-    // 1. Process local changes (Push)
     await processPush(getToken)
-
-    // 2. Fetch remote changes (Pull)
     await processPull(getToken)
 }
 
@@ -24,46 +19,55 @@ async function processPush(getToken: () => Promise<string | null>) {
     const token = await getToken()
     if (!token) return
 
+    // Group changes by table (Industrial Batching)
+    const changes: any = {}
+    const entriesToUpdate: number[] = []
+
     for (const entry of pending) {
-        try {
-            await db.outbox.update(entry.id!, { status: SyncStatus.SYNCING })
+        const key = entry.table === 'bank_transactions' ? 'bankTransactions' : 
+                    entry.table === 'stock_movements' ? 'stockMovements' : 
+                    entry.table === 'invoice_payments' ? 'payments' : 
+                    entry.table === 'hr_leaves' ? 'leaves' : entry.table;
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${entry.table}`, {
-                method: entry.type === 'CREATE' ? 'POST' : (entry.type === 'UPDATE' ? 'PATCH' : 'DELETE'),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(entry.data)
-            })
-
-            if (response.ok) {
-                const serverData = await response.json()
-
-                // Update local status
-                await db.outbox.update(entry.id!, { status: SyncStatus.COMPLETED })
-
-                // Update local entity with server version (e.g. real IDs, syncedAt timestamp)
-                // If it was a DELETE, we don't update anything
-                if (entry.type !== 'DELETE') {
-                    await db.table(entry.table).update(entry.localId || entry.data.id, {
-                        ...serverData,
-                        syncedAt: Date.now()
-                    })
-                }
-            } else {
-                const error = await response.text()
-                throw new Error(error || 'Sync failed')
-            }
-        } catch (error: any) {
-            console.error(`Sync push failed for ${entry.table}:`, error)
-            await db.outbox.update(entry.id!, {
-                status: SyncStatus.FAILED,
-                lastError: error.message,
-                retryCount: (entry.retryCount || 0) + 1,
-                updatedAt: Date.now()
-            })
+        if (!changes[key]) changes[key] = { created: [], deleted: [] }
+        
+        if (entry.type === 'DELETE') {
+            changes[key].deleted.push(entry.localId || entry.data.id)
+        } else {
+            changes[key].created.push(entry.data)
         }
+        entriesToUpdate.push(entry.id!)
+    }
+
+    try {
+        await db.outbox.bulkUpdate(entriesToUpdate.map(id => ({ key: id, changes: { status: SyncStatus.SYNCING } })))
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sync/push`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ changes })
+        })
+
+        const resData = await response.json()
+        if (response.ok && resData.success) {
+            await db.outbox.bulkDelete(entriesToUpdate)
+            console.log('[Sync] Push successful', resData.data.results)
+        } else {
+            throw new Error(resData.message || 'Sync push failed')
+        }
+    } catch (error: any) {
+        console.error('Sync push failed:', error)
+        await db.outbox.bulkUpdate(entriesToUpdate.map(id => ({ 
+            key: id, 
+            changes: { 
+                status: SyncStatus.FAILED, 
+                lastError: error.message,
+                retryCount: 1 // Simple increment for now
+            } 
+        })))
     }
 }
 
@@ -78,34 +82,53 @@ async function processPull(getToken: () => Promise<string | null>) {
             headers: { 'Authorization': `Bearer ${token}` }
         })
 
-        if (!res.ok) throw new Error('Failed to pull changes')
+        const resData = await res.json()
+        if (!res.ok || !resData.success) throw new Error(resData.message || 'Failed to pull changes')
 
-        const data = await res.json()
+        const data = resData.data
         const changes = data.changes
 
-        await db.transaction('rw', [db.items, db.categories, db.sales, db.customers], async () => {
-            // Bulk put (create/update) items
-            if (changes.items?.updated?.length > 0) {
-                await db.items.bulkPut(changes.items.updated)
+        // Industrial Multi-Table Transaction
+        await db.transaction('rw', db.tables, async () => {
+            const tableMap: Record<string, any> = {
+                items: db.items,
+                categories: db.categories,
+                customers: db.customers,
+                suppliers: db.suppliers,
+                sales: db.sales,
+                saleItems: db.saleItems,
+                expenses: db.expenses,
+                expenseCategories: db.expenseCategories,
+                quotations: db.quotations,
+                quotationItems: db.quotationItems,
+                returns: db.returns,
+                returnItems: db.returnItems,
+                bankAccounts: db.bankAccounts,
+                bankTransactions: db.bankTransactions,
+                stockMovements: db.stockMovements,
+                projects: db.projects,
+                leaveRequests: db.leaveRequests,
+                purchases: db.purchases,
+                purchaseItems: db.purchaseItems
             }
-            // Bulk put categories
-            if (changes.categories?.updated?.length > 0) {
-                await db.categories.bulkPut(changes.categories.updated)
-            }
-            // Bulk put sales
-            if (changes.sales?.updated?.length > 0) {
-                await db.sales.bulkPut(changes.sales.updated)
-            }
-            // Bulk put customers
-            if (changes.customers?.updated?.length > 0) {
-                await db.customers.bulkPut(changes.customers.updated)
+
+            for (const [key, table] of Object.entries(tableMap)) {
+                const entityChanges = changes[key]
+                if (entityChanges) {
+                    // 1. Process Deletions
+                    if (entityChanges.deleted?.length > 0) {
+                        await table.bulkDelete(entityChanges.deleted)
+                    }
+                    // 2. Process Updates
+                    if (entityChanges.updated?.length > 0) {
+                        await table.bulkPut(entityChanges.updated)
+                    }
+                }
             }
         })
 
-        // Update timestamp
         localStorage.setItem(SYNC_TIMESTAMP_KEY, data.timestamp.toString())
-        console.log(`[Sync] Pulled changes since ${new Date(parseInt(lastPulledAt)).toLocaleString()}`)
-
+        console.log(`[Sync] Pulled changes successfully. Timestamp: ${data.timestamp}`)
     } catch (error) {
         console.error('[Sync] Pull failed:', error)
     }

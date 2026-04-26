@@ -16,6 +16,9 @@ class AuthService extends ChangeNotifier {
   String? _employeeId;
   String? get employeeId => _employeeId;
 
+  Map<String, dynamic>? _profile;
+  Map<String, dynamic>? get profile => _profile;
+
   AuthService() {
     try {
       _user = Supabase.instance.client.auth.currentUser;
@@ -43,9 +46,14 @@ class AuthService extends ChangeNotifier {
     try {
       final profile = await _supabase
           .from('profiles')
-          .select('organization_id')
+          .select('organization_id, first_name, last_name')
           .eq('user_id', _user!.id)
           .single();
+      
+      _profile = {
+        'firstName': profile['first_name'] ?? 'Partner',
+        'lastName': profile['last_name'] ?? '',
+      };
       
       final org = await _supabase
           .from('organizations')
